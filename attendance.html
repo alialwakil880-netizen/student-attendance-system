@@ -40,7 +40,7 @@
                     </div>
                     <div class="option-card" onclick="showCameraAttendance()">
                         <div class="option-icon">📷</div>
-                        <h3>مسح باركود</h3>
+                        <h3>مسح QR</h3>
                         <p>استخدم الكاميرا لمسح الكود</p>
                     </div>
                 </div>
@@ -53,11 +53,14 @@
                 </div>
 
                 <div id="cameraAttendance" class="attendance-section" style="display:none;">
-                    <h3>📷 مسح الباركود</h3>
-                    <p style="color:#888;margin-bottom:10px;">ضع الباركود أمام الكاميرا للتسجيل التلقائي</p>
-                    <div id="reader" style="width:100%;max-width:500px;margin:0 auto;"></div>
-                    <div id="scanResult" class="scan-result"></div>
+                    <h3>📷 مسح QR</h3>
+                    <p style="color:#888;margin-bottom:10px;">ضع الـ QR أمام الكاميرا للتسجيل التلقائي</p>
+                    <div id="reader" style="width:300px;margin:auto;"></div>
+                    <button onclick="startQRScanner()" class="btn-primary" style="margin-top:15px;">
+                        📷 بدء المسح
+                    </button>
                     <button onclick="stopCameraReader()" class="btn-danger" style="margin-top:10px;">⏹ إيقاف الكاميرا</button>
+                    <div id="scanResult" class="scan-result"></div>
                 </div>
             </div>
         </div>
