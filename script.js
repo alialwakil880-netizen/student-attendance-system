@@ -179,6 +179,7 @@ async function loadData() {
             await initSupabaseClient();
         }
         
+        // جلب الطلاب من Supabase
         const { data: studentsData, error: studentsError } = await supabaseClient
             .from('students')
             .select('*')
@@ -187,6 +188,7 @@ async function loadData() {
         if (studentsError) throw studentsError;
         students = studentsData || [];
         
+        // جلب المجاميع
         const { data: groupsData, error: groupsError } = await supabaseClient
             .from('groups')
             .select('*')
@@ -195,6 +197,7 @@ async function loadData() {
         if (groupsError) throw groupsError;
         groups = groupsData || [];
         
+        // جلب الحضور
         const { data: attendanceData, error: attendanceError } = await supabaseClient
             .from('attendance')
             .select('*')
@@ -203,6 +206,7 @@ async function loadData() {
         if (attendanceError) throw attendanceError;
         attendance = attendanceData || [];
         
+        // جلب الدرجات
         const { data: gradesData, error: gradesError } = await supabaseClient
             .from('grades')
             .select('*')
@@ -211,12 +215,35 @@ async function loadData() {
         if (gradesError) throw gradesError;
         grades = gradesData || [];
         
+        // 🔥 جلب سجل المصاريف لكل طالب من Supabase
+        for (let student of students) {
+            const { data: feesData, error: feesError } = await supabaseClient
+                .from('fees_history')
+                .select('*')
+                .eq('student_id', student.id)
+                .order('date', { ascending: false });
+            
+            if (!feesError && feesData) {
+                student.feesHistory = feesData;
+                // حساب إجمالي المدفوع
+                let totalPaid = 0;
+                feesData.forEach(f => {
+                    totalPaid += f.amount || 0;
+                });
+                student.fees_paid = totalPaid;
+            } else {
+                student.feesHistory = [];
+                student.fees_paid = 0;
+            }
+        }
+        
         console.log('✅ تم تحميل البيانات من Supabase. عدد الطلاب:', students.length);
         if (students.length > 0) {
             console.log('📊 أول طالب:', students[0]);
             console.log('📋 الحقول المتاحة:', Object.keys(students[0]));
         }
         
+        // حفظ نسخة احتياطية في LocalStorage
         saveData();
         
     } catch (error) {
@@ -237,6 +264,23 @@ function loadDataLocal() {
         attendance = savedAttendance ? JSON.parse(savedAttendance) : [];
         grades = savedGrades ? JSON.parse(savedGrades) : [];
         
+        // جلب سجل المصاريف لكل طالب من LocalStorage
+        students.forEach(student => {
+            const feesData = localStorage.getItem(`fees_${student.id}`);
+            if (feesData) {
+                student.feesHistory = JSON.parse(feesData);
+                // حساب إجمالي المدفوع
+                let totalPaid = 0;
+                student.feesHistory.forEach(f => {
+                    totalPaid += f.amount || 0;
+                });
+                student.fees_paid = totalPaid;
+            } else {
+                student.feesHistory = [];
+                student.fees_paid = 0;
+            }
+        });
+        
         console.log('✅ تم تحميل البيانات من LocalStorage. عدد الطلاب:', students.length);
     } catch (error) {
         console.error('❌ خطأ في تحميل البيانات:', error);
@@ -249,10 +293,19 @@ function loadDataLocal() {
 
 function saveData() {
     try {
+        // حفظ البيانات الأساسية
         localStorage.setItem('students', JSON.stringify(students));
         localStorage.setItem('groups', JSON.stringify(groups));
         localStorage.setItem('attendance', JSON.stringify(attendance));
         localStorage.setItem('grades', JSON.stringify(grades));
+        
+        // حفظ سجل المصاريف لكل طالب بشكل منفصل
+        students.forEach(student => {
+            if (student.feesHistory && student.feesHistory.length > 0) {
+                localStorage.setItem(`fees_${student.id}`, JSON.stringify(student.feesHistory));
+            }
+        });
+        
         console.log('✅ تم حفظ البيانات في LocalStorage');
     } catch (error) {
         console.error('❌ خطأ في حفظ البيانات:', error);
@@ -1980,13 +2033,26 @@ function loadGrades(studentId) {
 function loadFeesHistory(studentId) {
     const tableBody = document.getElementById('feesTableBody');
     if (!tableBody) return;
+    
     const student = students.find(s => s.id === studentId);
-    if (!student || !student.feesHistory || student.feesHistory.length === 0) {
+    if (!student) {
         tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;">لا توجد مدفوعات</td></tr>`;
         return;
     }
-    tableBody.innerHTML = student.feesHistory.map(f => {
-        return `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong style="color:#4CAF50;">${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`;
+    
+    const feesHistory = student.feesHistory || [];
+    
+    if (feesHistory.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;">لا توجد مدفوعات</td></tr>`;
+        return;
+    }
+    
+    tableBody.innerHTML = feesHistory.map(f => {
+        return `<tr>
+            <td>${new Date(f.date).toLocaleDateString('ar-EG')}</td>
+            <td><strong style="color:#4CAF50;">${f.amount} ج</strong></td>
+            <td>${f.note || '-'}</td>
+        </tr>`;
     }).join('');
 }
 
@@ -2148,6 +2214,7 @@ async function addFees() {
         }
         
         console.log('📤 جاري إضافة مصاريف للطالب:', currentStudentId);
+        console.log('💰 المبلغ:', amount, 'ملاحظات:', note);
         
         const { data, error } = await supabaseClient
             .from('fees_history')
@@ -2161,36 +2228,36 @@ async function addFees() {
         
         if (error) {
             console.error('❌ خطأ Supabase:', error);
-            saveFeesLocally(currentStudentId, amount, note);
+            alert('❌ خطأ في إضافة الدفعة: ' + error.message);
             return;
         }
         
-        console.log('✅ تم إضافة الدفعة:', data);
+        console.log('✅ تم إضافة الدفعة في Supabase:', data);
         
+        // تحديث البيانات المحلية
         const student = students.find(s => s.id === currentStudentId);
         if (student) {
-            if (!student.feesHistory) student.feesHistory = [];
+            // إضافة السجل الجديد
             if (data && data.length > 0) {
-                student.feesHistory.push(data[0]);
-            } else {
-                const tempFee = {
-                    id: Date.now().toString(),
-                    student_id: currentStudentId,
-                    amount: parseFloat(amount),
-                    note: note,
-                    date: new Date().toISOString()
-                };
-                student.feesHistory.push(tempFee);
+                if (!student.feesHistory) student.feesHistory = [];
+                student.feesHistory.unshift(data[0]);
             }
-            student.fees_paid = (getStudentField(student, 'fees_paid') || 0) + parseFloat(amount);
             
+            // تحديث إجمالي المدفوع
+            let totalPaid = 0;
+            student.feesHistory.forEach(f => {
+                totalPaid += f.amount || 0;
+            });
+            student.fees_paid = totalPaid;
+            
+            // تحديث في Supabase
             await supabaseClient
                 .from('students')
                 .update({ fees_paid: student.fees_paid })
                 .eq('id', student.id);
-            saveData();
         }
         
+        saveData();
         loadProfileData();
         alert('✅ تم إضافة الدفعة بنجاح');
         
@@ -2199,33 +2266,6 @@ async function addFees() {
         
     } catch (error) {
         console.error('❌ Error adding fee:', error);
-        saveFeesLocally(currentStudentId, amount, note);
-    }
-}
-
-function saveFeesLocally(studentId, amount, note) {
-    try {
-        const student = students.find(s => s.id === studentId);
-        if (student) {
-            if (!student.feesHistory) student.feesHistory = [];
-            const tempFee = {
-                id: Date.now().toString(),
-                student_id: studentId,
-                amount: parseFloat(amount),
-                note: note,
-                date: new Date().toISOString()
-            };
-            student.feesHistory.push(tempFee);
-            student.fees_paid = (getStudentField(student, 'fees_paid') || 0) + parseFloat(amount);
-            saveData();
-            loadProfileData();
-            alert('✅ تم إضافة الدفعة بنجاح (محلياً)');
-            
-            document.getElementById('feesAmount').value = '';
-            document.getElementById('feesNote').value = '';
-        }
-    } catch (error) {
-        console.error('❌ فشل الحفظ المحلي:', error);
         alert('⚠️ حدث خطأ في إضافة الدفعة: ' + error.message);
     }
 }
