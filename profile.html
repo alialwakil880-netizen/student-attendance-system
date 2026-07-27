@@ -92,7 +92,7 @@
             <div class="main-content">
                 <div class="header">
                     <h1>👤 بروفايل الطالب</h1>
-                    <div style="display:flex;gap:10px;">
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
                         <button onclick="editStudentFromProfile()" class="btn-primary" style="background:#ff9800;">✏️ تعديل</button>
                         <button onclick="navigateTo('students.html')" class="btn-secondary">🔙 رجوع</button>
                     </div>
@@ -128,6 +128,7 @@
                                 <button onclick="sendMonthlyReportDirect(currentStudentId)" class="btn-primary" style="width:auto;padding:6px 12px;font-size:12px;background:#ff9800;">📊 تقرير</button>
                                 <button onclick="generatePDF()" class="btn-primary" style="width:auto;padding:6px 12px;font-size:12px;background:#dc2626;">📄 PDF</button>
                                 <button onclick="giveReward()" class="btn-primary" style="width:auto;padding:6px 12px;font-size:12px;background:#fbbf24;">🎁 مكافأة</button>
+                                <button onclick="generateParentQRCode(currentStudentId)" class="btn-primary" style="width:auto;padding:6px 12px;font-size:12px;background:#fbbf24;color:#000;">📱 كود ولي الأمر</button>
                             </div>
                         </div>
                         <div class="profile-qr">
