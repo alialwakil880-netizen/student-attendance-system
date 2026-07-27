@@ -4,8 +4,7 @@
   "description": "نظام حضور وغياب الطلاب مع باركود",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "vercel-build": "echo 'Build complete'"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
