@@ -3042,84 +3042,28 @@ async function markAttendanceById(studentId) {
         alert('❌ حدث خطأ في تسجيل الحضور');
         return false;
     }
-}
-function downloadQRCodeCard() {
+}function downloadParentQR() {
 
-    const qrCanvas = document.querySelector("#profileQRCode canvas");
+    const url = parentUrl; // أو نفس الرابط اللي بتحطه في الـQR
 
-    if (!qrCanvas) {
-        alert("QR غير موجود");
-        return;
-    }
+    const div = document.createElement("div");
 
-    const code = document.getElementById("profileCode").textContent.trim();
+    new QRCode(div, {
+        text: url,
+        width: 1000,
+        height: 1000,
+        correctLevel: QRCode.CorrectLevel.H
+    });
 
-    const canvas = document.createElement("canvas");
-    canvas.width = 450;
-    canvas.height = 520;
+    setTimeout(() => {
 
-    const ctx = canvas.getContext("2d");
+        const canvas = div.querySelector("canvas");
 
-    // خلفية
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const link = document.createElement("a");
+        link.download = "QR.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
 
-    // إطار
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(10,10,430,500);
+    },300);
 
-    // رسم الـ QR
-    ctx.drawImage(qrCanvas, 75, 40, 300, 300);
-
-    // رقم الطالب
-    ctx.fillStyle = "#000";
-    ctx.font = "bold 42px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(code, canvas.width / 2, 400);
-
-    const link = document.createElement("a");
-    link.download = `QR-${code}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-}
-function downloadParentQR() {
-    const qr = document.querySelector("#parentQRCode canvas");
-
-    if (!qr) {
-        alert("QR غير موجود");
-        return;
-    }
-
-    const studentCode = document.getElementById("parentCode")?.textContent || "student";
-
-    const link = document.createElement("a");
-    link.download = studentCode + ".png";
-    link.href = qr.toDataURL("image/png");
-    link.click();
-}
-function downloadParentQR() {
-
-    const canvas = document.querySelector("#parentQRCode canvas");
-    const img = document.querySelector("#parentQRCode img");
-
-    let src = "";
-
-    if (canvas) {
-        src = canvas.toDataURL("image/png");
-    } else if (img) {
-        src = img.src;
-    } else {
-        alert("لم يتم العثور على QR");
-        return;
-    }
-
-    const code = document.getElementById("parentCode")
-        ? document.getElementById("parentCode").textContent
-        : "QR";
-
-    const link = document.createElement("a");
-    link.href = src;
-    link.download = code + ".png";
-    link.click();
 }
