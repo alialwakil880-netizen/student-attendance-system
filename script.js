@@ -1554,735 +1554,6 @@ function loadParentData() {
     const urlParams = new URLSearchParams(window.location.search);
     const studentId = urlParams.get('id');
     
-    if (!studentId) {
-        container.innerHTML = `
-            <div class="parent-not-found">
-                <h2>❌ لم يتم العثور على طالب</h2>
-                <p>يرجى استخدام الرابط الصحيح للوصول إلى بيانات الطالب</p>
-                <a href="index.html" class="parent-back-btn">🔙 العودة لتسجيل الدخول</a>
-            </div>
-        `;
-        return;
-    }
-    
-    const student = students.find(s => s.id === studentId);
-    
-    if (!student) {
-        container.innerHTML = `
-            <div class="parent-not-found">
-                <h2>❌ طالب غير موجود</h2>
-                <p>الطالب الذي تبحث عنه غير موجود في النظام</p>
-                <a href="index.html" class="parent-back-btn">🔙 العودة لتسجيل الدخول</a>
-            </div>
-        `;
-        return;
-    }
-    
-    const studentName = getStudentField(student, 'name') || 'غير معروف';
-    const studentCode = getStudentField(student, 'code') || '---';
-    const studentPhone = getStudentField(student, 'phone') || 'غير مسجل';
-    const studentFees = getStudentField(student, 'fees') || 0;
-    const studentFeesPaid = getStudentField(student, 'fees_paid') || 0;
-    const studentPoints = getStudentField(student, 'points') || 0;
-    const studentStreak = getStudentField(student, 'streak') || 0;
-    const studentIsStar = student.is_star || false;
-    
-    const group = groups.find(g => g.id === student.group_id);
-    const groupName = group ? group.name : 'غير محدد';
-    
-    const level = getLevelLabel(getStudentLevel(student.id));
-    const levelClass = getLevelClass(getStudentLevel(student.id));
-    const rank = getStudentRank(student.id);
-    const medals = getMedals(student);
-    const remainingFees = studentFees - studentFeesPaid;
-    
-    const studentAttendance = attendance.filter(a => a.student_id === student.id);
-    const present = studentAttendance.filter(a => a.status === 'present').length;
-    const absent = studentAttendance.filter(a => a.status === 'absent').length;
-    const totalAttendance = present + absent;
-    const attendanceRate = totalAttendance > 0 ? Math.round((present / totalAttendance) * 100) : 0;
-    
-    const studentGrades = grades.filter(g => g.student_id === student.id);
-    const gradesAvg = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
-    
-    const feesHistory = student.feesHistory || [];
-    
-    container.innerHTML = `
-        <div class="parent-card">
-            <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px;">
-                <div style="font-size:80px;background:#f8f9fa;border-radius:50%;width:100px;height:100px;display:flex;align-items:center;justify-content:center;border:3px solid #667eea;">
-                    ${getAvatar(student.id)}
-                </div>
-                <div style="flex:1;">
-                    <h2 style="font-size:28px;color:#1a1a2e;margin:0;">${studentName}</h2>
-                    <p style="color:#888;margin:5px 0;">🔑 الكود: <strong style="color:#667eea;font-size:20px;">${studentCode}</strong></p>
-                    <p style="color:#888;margin:5px 0;">📋 المجموعة: <strong>${groupName}</strong></p>
-                    ${studentIsStar ? '<span style="display:inline-block;background:#fbbf24;padding:4px 16px;border-radius:30px;font-weight:700;color:#000;font-size:14px;">⭐ طالب مميز</span>' : ''}
-                </div>
-                <div class="parent-qr-code">
-                    <div id="parentQRCode"></div>
-                </div>
-            </div>
-            
-            <div class="parent-info-grid">
-                <div class="parent-info-item">
-                    <span class="label">📱 ولي الأمر</span>
-                    <span class="value">${studentPhone}</span>
-                </div>
-                <div class="parent-info-item">
-                    <span class="label">🏆 المستوى</span>
-                    <span class="value"><span class="parent-level-badge parent-level-${levelClass.replace('level-', '')}">${level}</span></span>
-                </div>
-                <div class="parent-info-item">
-                    <span class="label">⭐ النقاط</span>
-                    <span class="value">${studentPoints} نقطة</span>
-                </div>
-                <div class="parent-info-item">
-                    <span class="label">🥇 الترتيب</span>
-                    <span class="value">#${rank}</span>
-                </div>
-                <div class="parent-info-item">
-                    <span class="label">🔥 سلسلة الحضور</span>
-                    <span class="value">${studentStreak} يوم</span>
-                </div>
-                <div class="parent-info-item">
-                    <span class="label">🏅 الميداليات</span>
-                    <span class="value"><span class="parent-medals">${medals.length > 0 ? medals.join(' ') : 'لا توجد'}</span></span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="parent-card">
-            <h2>📊 إحصائيات الطالب</h2>
-            <div class="parent-stats">
-                <div class="parent-stat">
-                    <div class="num green">${present}</div>
-                    <div class="lbl">✅ حضور</div>
-                </div>
-                <div class="parent-stat">
-                    <div class="num red">${absent}</div>
-                    <div class="lbl">❌ غياب</div>
-                </div>
-                <div class="parent-stat">
-                    <div class="num blue">${attendanceRate}%</div>
-                    <div class="lbl">📊 نسبة الحضور</div>
-                </div>
-                <div class="parent-stat">
-                    <div class="num purple">${gradesAvg}</div>
-                    <div class="lbl">📝 متوسط الدرجات</div>
-                </div>
-                <div class="parent-stat">
-                    <div class="num gold">${studentFees} ج</div>
-                    <div class="lbl">💰 إجمالي المصاريف</div>
-                </div>
-                <div class="parent-stat">
-                    <div class="num green">${studentFeesPaid} ج</div>
-                    <div class="lbl">💳 المدفوع</div>
-                </div>
-                <div class="parent-stat">
-                    <div class="num red">${remainingFees} ج</div>
-                    <div class="lbl">📦 المتبقي</div>
-                </div>
-                <div class="parent-stat">
-                    <div class="num purple">${studentGrades.length}</div>
-                    <div class="lbl">📝 عدد الدرجات</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="parent-card">
-            <h2>📝 سجل الدرجات</h2>
-            ${studentGrades.length > 0 ? `
-            <table class="parent-table">
-                <thead>
-                    <tr><th>المادة</th><th>الدرجة</th><th>التاريخ</th></tr>
-                </thead>
-                <tbody>
-                    ${studentGrades.map(g => `
-                        <tr>
-                            <td>${g.subject}</td>
-                            <td><strong style="color:#667eea;">${g.value}</strong></td>
-                            <td>${new Date(g.date).toLocaleDateString('ar-EG')}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            ` : '<p style="color:#888;text-align:center;padding:20px;">📭 لا توجد درجات مسجلة</p>'}
-        </div>
-        
-        <div class="parent-card">
-            <h2>💰 سجل المصاريف</h2>
-            ${feesHistory.length > 0 ? `
-            <table class="parent-table">
-                <thead>
-                    <tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th></tr>
-                </thead>
-                <tbody>
-                    ${feesHistory.map(f => `
-                        <tr>
-                            <td>${new Date(f.date).toLocaleDateString('ar-EG')}</td>
-                            <td><strong style="color:#4CAF50;">${f.amount} ج</strong></td>
-                            <td>${f.note || '-'}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            ` : '<p style="color:#888;text-align:center;padding:20px;">📭 لا توجد مدفوعات مسجلة</p>'}
-            
-            <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:15px;padding:15px;background:#f8f9fa;border-radius:12px;">
-                <div><strong>الإجمالي:</strong> <span style="color:#667eea;font-weight:700;">${studentFees} ج</span></div>
-                <div><strong>المدفوع:</strong> <span style="color:#4CAF50;font-weight:700;">${studentFeesPaid} ج</span></div>
-                <div><strong>المتبقي:</strong> <span style="color:#f44336;font-weight:700;">${remainingFees} ج</span></div>
-            </div>
-        </div>
-        
-        <div class="parent-warning">
-            <p>🔒 هذه الصفحة للعرض فقط - لا توجد صلاحيات تعديل</p>
-        </div>
-    `;
-    
-    generateQRCode('parentQRCode', studentCode);
-}
-
-// ============================================================
-// Profile
-// ============================================================
-
-function loadProfileData() {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-
-    let student;
-
-    if (code) {
-        student = students.find(s => {
-            const studentCode = getStudentField(s, 'code');
-            return studentCode === code;
-        });
-    } else {
-        const studentId = localStorage.getItem("viewStudentId");
-        student = students.find(s => s.id === studentId);
-    }
-
-    if (!student) {
-        alert("⚠️ الطالب غير موجود");
-        window.location.href = "students.html";
-        return;
-    }
-
-    currentStudentId = student.id;
-    const group = groups.find(g => g.id === student.group_id);
-    const studentName = getStudentField(student, 'name') || 'غير معروف';
-    const studentPhone = getStudentField(student, 'phone') || 'غير محدد';
-    const studentCode = getStudentField(student, 'code') || 'غير محدد';
-    const totalFees = getStudentField(student, 'fees') || 0;
-    const points = getStudentField(student, 'points') || 0;
-    const streak = getStudentField(student, 'streak') || 0;
-
-    document.getElementById('profileName').textContent = studentName;
-    document.getElementById('profilePhone').textContent = studentPhone;
-    document.getElementById('profileGroup').textContent = group ? group.name : 'غير محدد';
-    document.getElementById('profileCode').textContent = studentCode;
-    document.getElementById('profileAvatar').textContent = getAvatar(student.id);
-    document.getElementById('profileFees').textContent = totalFees;
-    
-    const rank = getStudentRank(student.id);
-    const medals = getMedals(student);
-    
-    document.getElementById('profilePoints').textContent = points;
-    document.getElementById('profileRank').textContent = rank;
-    document.getElementById('profileStreak').textContent = streak;
-    document.getElementById('profileMedals').textContent = medals.join(' ');
-    
-    document.getElementById('studentPoints').textContent = points;
-    document.getElementById('studentLevel').textContent = getLevelLabel(getStudentLevel(student.id));
-    document.getElementById('studentMedals').textContent = medals.join(' ');
-    
-    const studentGrades = grades.filter(g => g.student_id === student.id);
-    const avg = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
-    document.getElementById('profileAvgGrade').textContent = avg + '%';
-    document.getElementById('profileGradeRank').textContent = rank;
-    
-    const studentAttendance = attendance.filter(a => a.student_id === student.id);
-    const present = studentAttendance.filter(a => a.status === 'present').length;
-    const absent = studentAttendance.filter(a => a.status === 'absent').length;
-    const total = present + absent;
-    const average = total > 0 ? Math.round((present / total) * 100) : 0;
-    
-    document.getElementById('profilePresent').textContent = present;
-    document.getElementById('profileAbsent').textContent = absent;
-    document.getElementById('profileAverage').textContent = average + '%';
-    document.getElementById('profileTotalFees').textContent = totalFees;
-    document.getElementById('profileGradesCount').textContent = studentGrades.length;
-    document.getElementById('profileGradesAvg').textContent = avg + '%';
-    
-    generateQRCode('profileQRCode', studentCode);
-    
-    loadGrades(student.id);
-    loadFeesHistory(student.id);
-}
-
-function loadStudentFromQR() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    
-    if (!code) {
-        document.getElementById('studentProfileCard').innerHTML = `
-            <div style="text-align:center;padding:40px;">
-                <h2>❌ لم يتم العثور على طالب</h2>
-                <p style="color:#888;">يرجى مسح QR Code صحيح</p>
-                <button onclick="window.location.href='index.html'" class="btn-primary" style="margin-top:20px;">🔙 العودة لتسجيل الدخول</button>
-            </div>
-        `;
-        return;
-    }
-    
-    const student = students.find(s => {
-        const studentCode = getStudentField(s, 'code');
-        return studentCode === code;
-    });
-    
-    if (!student) {
-        document.getElementById('studentProfileCard').innerHTML = `
-            <div style="text-align:center;padding:40px;">
-                <h2>❌ طالب غير موجود</h2>
-                <p style="color:#888;">الكود: ${code}</p>
-                <button onclick="window.location.href='index.html'" class="btn-primary" style="margin-top:20px;">🔙 العودة لتسجيل الدخول</button>
-            </div>
-        `;
-        return;
-    }
-    
-    currentStudentId = student.id;
-    const group = groups.find(g => g.id === student.group_id);
-    const studentName = getStudentField(student, 'name') || 'غير معروف';
-    const studentPhone = getStudentField(student, 'phone') || 'غير محدد';
-    const studentCode = getStudentField(student, 'code') || 'غير محدد';
-    const totalFees = getStudentField(student, 'fees') || 0;
-    const points = getStudentField(student, 'points') || 0;
-    const streak = getStudentField(student, 'streak') || 0;
-    
-    document.getElementById('spAvatar').textContent = getAvatar(student.id);
-    document.getElementById('spName').textContent = studentName;
-    document.getElementById('spPhone').textContent = studentPhone;
-    document.getElementById('spGroup').textContent = group ? group.name : 'غير محدد';
-    document.getElementById('spCode').textContent = studentCode;
-    document.getElementById('spFees').textContent = totalFees;
-    
-    const rank = getStudentRank(student.id);
-    const medals = getMedals(student);
-    
-    document.getElementById('spPoints').textContent = points;
-    document.getElementById('spRank').textContent = rank;
-    document.getElementById('spStreak').textContent = streak;
-    document.getElementById('spMedals').textContent = medals.join(' ');
-    
-    document.getElementById('spStudentPoints').textContent = points;
-    document.getElementById('spLevel').textContent = getLevelLabel(getStudentLevel(student.id));
-    document.getElementById('spStudentMedals').textContent = medals.join(' ');
-    
-    const studentAttendance = attendance.filter(a => a.student_id === student.id);
-    const present = studentAttendance.filter(a => a.status === 'present').length;
-    const absent = studentAttendance.filter(a => a.status === 'absent').length;
-    const total = present + absent;
-    const avg = total > 0 ? Math.round((present / total) * 100) : 0;
-    
-    document.getElementById('spPresentCount').textContent = present;
-    document.getElementById('spAbsentCount').textContent = absent;
-    document.getElementById('spAttendanceRate').textContent = avg + '%';
-    
-    const studentGrades = grades.filter(g => g.student_id === student.id);
-    const avgGrade = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
-    document.getElementById('spAvgGrade').textContent = avgGrade + '%';
-    document.getElementById('spGradeRank').textContent = rank;
-    
-    const totalFeesAmount = getStudentField(student, 'fees') || 0;
-    const paidFees = getStudentField(student, 'fees_paid') || 0;
-    const remainingFees = totalFeesAmount - paidFees;
-    document.getElementById('spTotalFees').textContent = totalFeesAmount;
-    document.getElementById('spPaidFees').textContent = paidFees;
-    document.getElementById('spRemainingFees').textContent = remainingFees;
-    
-    generateQRCode('spQRCode', studentCode);
-    
-    const gradesBody = document.getElementById('spGradesTableBody');
-    if (gradesBody) {
-        if (studentGrades.length === 0) {
-            gradesBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;padding:20px;">لا توجد درجات</td></tr>`;
-        } else {
-            gradesBody.innerHTML = studentGrades.map(g => {
-                return `<tr><td>${g.subject}</td><td><strong>${g.value}</strong></td><td>${new Date(g.date).toLocaleDateString('ar-EG')}</td></tr>`;
-            }).join('');
-        }
-    }
-    
-    const feesBody = document.getElementById('spFeesTableBody');
-    if (feesBody) {
-        if (!student.feesHistory || student.feesHistory.length === 0) {
-            feesBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;padding:20px;">لا توجد مدفوعات</td></tr>`;
-        } else {
-            feesBody.innerHTML = student.feesHistory.map(f => {
-                return `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong style="color:#4CAF50;">${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`;
-            }).join('');
-        }
-    }
-}
-
-function loadGrades(studentId) {
-    const tableBody = document.getElementById('gradesTableBody');
-    if (!tableBody) return;
-    const studentGrades = grades.filter(g => g.student_id === studentId);
-    if (studentGrades.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;">لا توجد درجات</td></tr>`;
-        return;
-    }
-    tableBody.innerHTML = studentGrades.map(g => {
-        return `<tr><td>${g.subject}</td><td><strong>${g.value}</strong></td><td>${new Date(g.date).toLocaleDateString('ar-EG')}</td></tr>`;
-    }).join('');
-}
-
-function loadFeesHistory(studentId) {
-    const tableBody = document.getElementById('feesTableBody');
-    if (!tableBody) return;
-    const student = students.find(s => s.id === studentId);
-    if (!student || !student.feesHistory || student.feesHistory.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;">لا توجد مدفوعات</td></tr>`;
-        return;
-    }
-    tableBody.innerHTML = student.feesHistory.map(f => {
-        return `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong style="color:#4CAF50;">${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`;
-    }).join('');
-}
-
-// ============================================================
-// Grades (مع Supabase)
-// ============================================================
-
-async function addGrade() {
-    const subject = document.getElementById('gradeSubject').value;
-    const value = document.getElementById('gradeValue').value;
-    if (!subject || !value) { alert('⚠️ من فضلك أدخل المادة والدرجة'); return; }
-    if (value < 0 || value > 100) { alert('⚠️ الدرجة يجب أن تكون بين 0 و 100'); return; }
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('grades')
-            .insert([{
-                student_id: currentStudentId,
-                subject: subject,
-                value: parseInt(value)
-            }])
-            .select();
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-            grades.unshift(data[0]);
-        } else {
-            const tempGrade = {
-                id: Date.now().toString(),
-                student_id: currentStudentId,
-                subject: subject,
-                value: parseInt(value),
-                date: new Date().toISOString()
-            };
-            grades.unshift(tempGrade);
-        }
-        
-        const student = students.find(s => s.id === currentStudentId);
-        if (student && parseInt(value) >= 90) {
-            student.points = (getStudentField(student, 'points') || 0) + 10;
-            await supabaseClient
-                .from('students')
-                .update({ points: student.points })
-                .eq('id', student.id);
-            alert('⭐ +10 نقاط على الدرجة الممتازة!');
-        } else if (student && parseInt(value) >= 80) {
-            student.points = (getStudentField(student, 'points') || 0) + 5;
-            await supabaseClient
-                .from('students')
-                .update({ points: student.points })
-                .eq('id', student.id);
-            alert('⭐ +5 نقاط على الدرجة الجيدة جداً!');
-        }
-        
-        checkMedals(student);
-        saveData();
-        loadProfileData();
-        updateHonorBoard();
-        updateLeaderboard();
-        alert('✅ تم إضافة الدرجة بنجاح');
-        
-        document.getElementById('gradeSubject').value = '';
-        document.getElementById('gradeValue').value = '';
-        
-    } catch (error) {
-        console.error('❌ Error adding grade:', error);
-        alert('⚠️ حدث خطأ في إضافة الدرجة');
-    }
-}
-
-// ============================================================
-// Fees (مع Supabase)
-// ============================================================
-
-async function addFees() {
-    const amount = document.getElementById('feesAmount').value;
-    const note = document.getElementById('feesNote').value || 'دفعة جديدة';
-    if (!amount || amount <= 0) { alert('⚠️ من فضلك أدخل مبلغ صحيح'); return; }
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('fees_history')
-            .insert([{
-                student_id: currentStudentId,
-                amount: parseFloat(amount),
-                note: note
-            }])
-            .select();
-        
-        if (error) throw error;
-        
-        const student = students.find(s => s.id === currentStudentId);
-        if (student) {
-            if (!student.feesHistory) student.feesHistory = [];
-            if (data && data.length > 0) {
-                student.feesHistory.push(data[0]);
-            } else {
-                const tempFee = {
-                    id: Date.now().toString(),
-                    student_id: currentStudentId,
-                    amount: parseFloat(amount),
-                    note: note,
-                    date: new Date().toISOString()
-                };
-                student.feesHistory.push(tempFee);
-            }
-            student.fees_paid = (getStudentField(student, 'fees_paid') || 0) + parseFloat(amount);
-            
-            await supabaseClient
-                .from('students')
-                .update({ fees_paid: student.fees_paid })
-                .eq('id', student.id);
-            saveData();
-        }
-        
-        loadProfileData();
-        alert('✅ تم إضافة الدفعة بنجاح');
-        
-        document.getElementById('feesAmount').value = '';
-        document.getElementById('feesNote').value = '';
-        
-    } catch (error) {
-        console.error('❌ Error adding fee:', error);
-        alert('⚠️ حدث خطأ في إضافة الدفعة');
-    }
-}
-
-// ============================================================
-// Cards
-// ============================================================
-
-function loadCardStudents() {
-    const select = document.getElementById('cardStudentSelect');
-    if (!select) return;
-    select.innerHTML = '<option value="">-- اختر طالب --</option>';
-    students.forEach(s => {
-        const studentName = getStudentField(s, 'name') || 'غير معروف';
-        const studentCode = getStudentField(s, 'code') || '---';
-        select.innerHTML += `<option value="${s.id}">${studentName} (${studentCode})</option>`;
-    });
-    showAllCards();
-}
-
-function showCard() {
-    const select = document.getElementById('cardStudentSelect');
-    const studentId = select.value;
-    const container = document.getElementById('cardContainer');
-    if (!studentId) { container.style.display = 'none'; return; }
-    const student = students.find(s => s.id === studentId);
-    if (!student) return;
-    container.style.display = 'block';
-    
-    const studentName = getStudentField(student, 'name') || 'غير معروف';
-    const studentCode = getStudentField(student, 'code') || '---';
-    const studentPoints = getStudentField(student, 'points') || 0;
-    
-    document.getElementById('cardName').textContent = studentName;
-    document.getElementById('cardCode').textContent = studentCode;
-    document.getElementById('cardAvatar').textContent = getAvatar(studentId);
-    document.getElementById('cardPoints').textContent = studentPoints;
-    const group = groups.find(g => g.id === student.group_id);
-    document.getElementById('cardGroup').textContent = group ? group.name : 'غير محدد';
-    
-    generateQRCode('cardQRCode', studentCode);
-}
-
-function showAllCards() {
-    const container = document.getElementById('allCardsContainer');
-    if (!container) return;
-    if (students.length === 0) {
-        container.innerHTML = '<p style="text-align:center;color:#888;">لا يوجد طلاب لعرض كارنيهاتهم</p>';
-        return;
-    }
-    
-    container.innerHTML = students.map(s => {
-        const group = groups.find(g => g.id === s.group_id);
-        const studentName = getStudentField(s, 'name') || 'غير معروف';
-        const studentCode = getStudentField(s, 'code') || '---';
-        const studentPoints = getStudentField(s, 'points') || 0;
-        return `
-            <div class="student-card" style="width:100%;">
-                <div class="card-header"><h2>📚 أكاديمية النجاح</h2><p>بطاقة تعريف طالب</p></div>
-                <div class="card-body">
-                    <div class="card-photo"><div class="card-avatar">${getAvatar(s.id)}</div></div>
-                    <div class="card-info">
-                        <p><strong>الاسم:</strong> ${studentName}</p>
-                        <p><strong>الكود:</strong> ${studentCode}</p>
-                        <p><strong>المجموعة:</strong> ${group ? group.name : 'غير محدد'}</p>
-                        <p><strong>⭐ نقاط:</strong> ${studentPoints}</p>
-                    </div>
-                    <div class="card-qr">
-                        <div id="cardQRCode-${s.id}"></div>
-                    </div>
-                </div>
-                <div class="card-footer"><p>✍️ توقيع المدير: _________________</p></div>
-            </div>
-        `;
-    }).join('');
-    
-    setTimeout(() => {
-        students.forEach(s => {
-            const studentCode = getStudentField(s, 'code') || '---';
-            generateQRCode(`cardQRCode-${s.id}`, studentCode);
-        });
-    }, 100);
-}
-
-function printCard() { window.print(); }
-function printSingleCard() { window.print(); }
-
-// ============================================================
-// PDF
-// ============================================================
-
-function generatePDF() {
-    const student = students.find(s => s.id === currentStudentId);
-    if (!student) { alert('⚠️ الطالب غير موجود'); return; }
-    
-    const studentName = getStudentField(student, 'name') || 'غير معروف';
-    const studentCode = getStudentField(student, 'code') || '---';
-    const studentPhone = getStudentField(student, 'phone') || 'غير مسجل';
-    const studentFees = getStudentField(student, 'fees') || 0;
-    const studentFeesPaid = getStudentField(student, 'fees_paid') || 0;
-    const studentPoints = getStudentField(student, 'points') || 0;
-    const studentStreak = getStudentField(student, 'streak') || 0;
-    
-    const studentAttendance = attendance.filter(a => a.student_id === currentStudentId);
-    const present = studentAttendance.filter(a => a.status === 'present').length;
-    const absent = studentAttendance.filter(a => a.status === 'absent').length;
-    const total = present + absent;
-    const average = total > 0 ? Math.round((present / total) * 100) : 0;
-    const studentGrades = grades.filter(g => g.student_id === currentStudentId);
-    const gradesAvg = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
-    const level = getLevelLabel(getStudentLevel(currentStudentId));
-    const rank = getStudentRank(currentStudentId);
-    const medals = getMedals(student);
-    const remainingFees = studentFees - studentFeesPaid;
-    const group = groups.find(g => g.id === student.group_id);
-    
-    let html = `
-        <html>
-        <head><title>تقرير الطالب - ${studentName}</title>
-        <style>
-            * { font-family: 'Cairo', Arial, sans-serif; }
-            body { background: white; padding: 40px; direction: rtl; }
-            .header { text-align: center; border-bottom: 3px solid #667eea; padding-bottom: 20px; }
-            .header h1 { color: #667eea; font-size: 28px; }
-            .header p { color: #666; font-size: 16px; }
-            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 30px 0; }
-            .info-item { background: #f5f7fa; padding: 15px; border-radius: 10px; }
-            .info-item label { font-weight: bold; color: #555; }
-            .info-item span { float: left; color: #333; }
-            .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 30px 0; }
-            .stat-item { text-align: center; background: #f5f7fa; padding: 20px; border-radius: 10px; }
-            .stat-item .number { font-size: 30px; font-weight: bold; color: #667eea; }
-            .stat-item .label { color: #888; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            table th { background: #667eea; color: white; padding: 10px; text-align: right; }
-            table td { padding: 10px; border-bottom: 1px solid #eee; }
-            .footer { text-align: center; margin-top: 30px; color: #888; font-size: 14px; border-top: 1px solid #ddd; padding-top: 20px; }
-            .badge { display: inline-block; padding: 5px 15px; border-radius: 30px; font-weight: bold; float: left; }
-            .level-excellent { background: #f9a825; color: #000; }
-            .level-very-good { background: #4CAF50; color: #fff; }
-            .level-good { background: #42a5f5; color: #fff; }
-            .level-acceptable { background: #ff9800; color: #fff; }
-            .level-weak { background: #f44336; color: #fff; }
-            .medals { font-size: 24px; }
-        </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>📚 تقرير الطالب الشهري</h1>
-                <p>${new Date().toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })}</p>
-            </div>
-            <div class="info-grid">
-                <div class="info-item"><label>👤 اسم الطالب</label><span>${studentName}</span></div>
-                <div class="info-item"><label>🔑 الكود</label><span>${studentCode}</span></div>
-                <div class="info-item"><label>📋 المجموعة</label><span>${group ? group.name : 'غير محدد'}</span></div>
-                <div class="info-item"><label>🏆 المستوى</label><span class="badge ${getLevelClass(getStudentLevel(currentStudentId))}">${level}</span></div>
-                <div class="info-item"><label>⭐ النقاط</label><span>${studentPoints} نقطة</span></div>
-                <div class="info-item"><label>🥇 الترتيب</label><span>#${rank}</span></div>
-                <div class="info-item"><label>🏅 الميداليات</label><span class="medals">${medals.join(' ')}</span></div>
-                <div class="info-item"><label>📱 ولي الأمر</label><span>${studentPhone}</span></div>
-            </div>
-            <div class="stats-grid">
-                <div class="stat-item"><div class="number">${present}</div><div class="label">✅ حضور</div></div>
-                <div class="stat-item"><div class="number">${absent}</div><div class="label">❌ غياب</div></div>
-                <div class="stat-item"><div class="number">${average}%</div><div class="label">📊 نسبة الحضور</div></div>
-                <div class="stat-item"><div class="number">${gradesAvg}</div><div class="label">📝 متوسط الدرجات</div></div>
-            </div>
-            <h3>📊 سجل الدرجات</h3>
-            ${studentGrades.length > 0 ? `
-            <table><thead><tr><th>المادة</th><th>الدرجة</th><th>التاريخ</th></tr></thead><tbody>
-                ${studentGrades.map(g => `<tr><td>${g.subject}</td><td><strong>${g.value}</strong></td><td>${new Date(g.date).toLocaleDateString('ar-EG')}</td></tr>`).join('')}
-            </tbody></table>` : '<p style="color:#888;">لا توجد درجات مسجلة</p>'}
-            <h3>💰 سجل المصاريف</h3>
-            ${student.feesHistory && student.feesHistory.length > 0 ? `
-            <table><thead><tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th></tr></thead><tbody>
-                ${student.feesHistory.map(f => `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong>${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`).join('')}
-            </tbody></table>
-            <p><strong>الإجمالي:</strong> ${studentFees} ج | <strong>المدفوع:</strong> ${studentFeesPaid} ج | <strong>المتبقي:</strong> ${remainingFees} ج</p>
-            ` : '<p style="color:#888;">لا توجد مدفوعات مسجلة</p>'}
-            <div class="footer">
-                <p>تم إنشاء هذا التقرير بواسطة نظام متابعة الطلاب</p>
-                <p>📅 ${new Date().toLocaleDateString('ar-EG')} - ${new Date().toLocaleTimeString('ar-EG')}</p>
-            </div>
-        </body>
-        </html>
-    `;
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    win.print();
-}
-// ============================================================
-// PARENT PORTAL - بوابة ولي الأمر
-// ============================================================
-
-function openParentPortal(studentId) {
-    const url = `parent-portal.html?id=${studentId}`;
-    window.open(url, '_blank', 'width=1100,height=900,scrollbars=yes,resizable=yes');
-}
-
-function loadParentData() {
-    const container = document.getElementById('parentContent');
-    if (!container) return;
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const studentId = urlParams.get('id');
-    
     console.log('🔍 Parent Portal - Student ID:', studentId);
     console.log('📊 Students count:', students.length);
     
@@ -2477,4 +1748,673 @@ function loadParentData() {
     `;
     
     generateQRCode('parentQRCode', studentCode);
+}
+
+// ============================================================
+// Profile - معدلة بالكامل مع التحقق من وجود العناصر
+// ============================================================
+
+function loadProfileData() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+
+    let student;
+
+    if (code) {
+        student = students.find(s => {
+            const studentCode = getStudentField(s, 'code');
+            return studentCode === code;
+        });
+    } else {
+        const studentId = localStorage.getItem("viewStudentId");
+        student = students.find(s => s.id === studentId);
+    }
+
+    if (!student) {
+        alert("⚠️ الطالب غير موجود");
+        window.location.href = "students.html";
+        return;
+    }
+
+    currentStudentId = student.id;
+    const group = groups.find(g => g.id === student.group_id);
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentPhone = getStudentField(student, 'phone') || 'غير محدد';
+    const studentCode = getStudentField(student, 'code') || 'غير محدد';
+    const totalFees = getStudentField(student, 'fees') || 0;
+    const points = getStudentField(student, 'points') || 0;
+    const streak = getStudentField(student, 'streak') || 0;
+
+    // التحقق من وجود العناصر قبل التعديل
+    const elements = {
+        profileName: document.getElementById('profileName'),
+        profilePhone: document.getElementById('profilePhone'),
+        profileGroup: document.getElementById('profileGroup'),
+        profileCode: document.getElementById('profileCode'),
+        profileAvatar: document.getElementById('profileAvatar'),
+        profileFees: document.getElementById('profileFees'),
+        profilePoints: document.getElementById('profilePoints'),
+        profileRank: document.getElementById('profileRank'),
+        profileStreak: document.getElementById('profileStreak'),
+        profileMedals: document.getElementById('profileMedals'),
+        studentPoints: document.getElementById('studentPoints'),
+        studentLevel: document.getElementById('studentLevel'),
+        studentMedals: document.getElementById('studentMedals'),
+        profileAvgGrade: document.getElementById('profileAvgGrade'),
+        profileGradeRank: document.getElementById('profileGradeRank'),
+        profilePresent: document.getElementById('profilePresent'),
+        profileAbsent: document.getElementById('profileAbsent'),
+        profileAverage: document.getElementById('profileAverage'),
+        profileTotalFees: document.getElementById('profileTotalFees'),
+        profileGradesCount: document.getElementById('profileGradesCount'),
+        profileGradesAvg: document.getElementById('profileGradesAvg')
+    };
+
+    // تحديث العناصر الموجودة فقط
+    if (elements.profileName) elements.profileName.textContent = studentName;
+    if (elements.profilePhone) elements.profilePhone.textContent = studentPhone;
+    if (elements.profileGroup) elements.profileGroup.textContent = group ? group.name : 'غير محدد';
+    if (elements.profileCode) elements.profileCode.textContent = studentCode;
+    if (elements.profileAvatar) elements.profileAvatar.textContent = getAvatar(student.id);
+    if (elements.profileFees) elements.profileFees.textContent = totalFees;
+    
+    const rank = getStudentRank(student.id);
+    const medals = getMedals(student);
+    
+    if (elements.profilePoints) elements.profilePoints.textContent = points;
+    if (elements.profileRank) elements.profileRank.textContent = rank;
+    if (elements.profileStreak) elements.profileStreak.textContent = streak;
+    if (elements.profileMedals) elements.profileMedals.textContent = medals.join(' ');
+    
+    if (elements.studentPoints) elements.studentPoints.textContent = points;
+    if (elements.studentLevel) elements.studentLevel.textContent = getLevelLabel(getStudentLevel(student.id));
+    if (elements.studentMedals) elements.studentMedals.textContent = medals.join(' ');
+    
+    const studentGrades = grades.filter(g => g.student_id === student.id);
+    const avg = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
+    
+    if (elements.profileAvgGrade) elements.profileAvgGrade.textContent = avg + '%';
+    if (elements.profileGradeRank) elements.profileGradeRank.textContent = rank;
+    
+    const studentAttendance = attendance.filter(a => a.student_id === student.id);
+    const present = studentAttendance.filter(a => a.status === 'present').length;
+    const absent = studentAttendance.filter(a => a.status === 'absent').length;
+    const total = present + absent;
+    const average = total > 0 ? Math.round((present / total) * 100) : 0;
+    
+    if (elements.profilePresent) elements.profilePresent.textContent = present;
+    if (elements.profileAbsent) elements.profileAbsent.textContent = absent;
+    if (elements.profileAverage) elements.profileAverage.textContent = average + '%';
+    if (elements.profileTotalFees) elements.profileTotalFees.textContent = totalFees;
+    if (elements.profileGradesCount) elements.profileGradesCount.textContent = studentGrades.length;
+    if (elements.profileGradesAvg) elements.profileGradesAvg.textContent = avg + '%';
+    
+    // إنشاء QR Code فقط إذا كان العنصر موجوداً
+    if (document.getElementById('profileQRCode')) {
+        generateQRCode('profileQRCode', studentCode);
+    }
+    
+    loadGrades(student.id);
+    loadFeesHistory(student.id);
+}
+
+function loadStudentFromQR() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (!code) {
+        document.getElementById('studentProfileCard').innerHTML = `
+            <div style="text-align:center;padding:40px;">
+                <h2>❌ لم يتم العثور على طالب</h2>
+                <p style="color:#888;">يرجى مسح QR Code صحيح</p>
+                <button onclick="window.location.href='index.html'" class="btn-primary" style="margin-top:20px;">🔙 العودة لتسجيل الدخول</button>
+            </div>
+        `;
+        return;
+    }
+    
+    const student = students.find(s => {
+        const studentCode = getStudentField(s, 'code');
+        return studentCode === code;
+    });
+    
+    if (!student) {
+        document.getElementById('studentProfileCard').innerHTML = `
+            <div style="text-align:center;padding:40px;">
+                <h2>❌ طالب غير موجود</h2>
+                <p style="color:#888;">الكود: ${code}</p>
+                <button onclick="window.location.href='index.html'" class="btn-primary" style="margin-top:20px;">🔙 العودة لتسجيل الدخول</button>
+            </div>
+        `;
+        return;
+    }
+    
+    currentStudentId = student.id;
+    const group = groups.find(g => g.id === student.group_id);
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentPhone = getStudentField(student, 'phone') || 'غير محدد';
+    const studentCode = getStudentField(student, 'code') || 'غير محدد';
+    const totalFees = getStudentField(student, 'fees') || 0;
+    const points = getStudentField(student, 'points') || 0;
+    const streak = getStudentField(student, 'streak') || 0;
+    
+    document.getElementById('spAvatar').textContent = getAvatar(student.id);
+    document.getElementById('spName').textContent = studentName;
+    document.getElementById('spPhone').textContent = studentPhone;
+    document.getElementById('spGroup').textContent = group ? group.name : 'غير محدد';
+    document.getElementById('spCode').textContent = studentCode;
+    document.getElementById('spFees').textContent = totalFees;
+    
+    const rank = getStudentRank(student.id);
+    const medals = getMedals(student);
+    
+    document.getElementById('spPoints').textContent = points;
+    document.getElementById('spRank').textContent = rank;
+    document.getElementById('spStreak').textContent = streak;
+    document.getElementById('spMedals').textContent = medals.join(' ');
+    
+    document.getElementById('spStudentPoints').textContent = points;
+    document.getElementById('spLevel').textContent = getLevelLabel(getStudentLevel(student.id));
+    document.getElementById('spStudentMedals').textContent = medals.join(' ');
+    
+    const studentAttendance = attendance.filter(a => a.student_id === student.id);
+    const present = studentAttendance.filter(a => a.status === 'present').length;
+    const absent = studentAttendance.filter(a => a.status === 'absent').length;
+    const total = present + absent;
+    const avg = total > 0 ? Math.round((present / total) * 100) : 0;
+    
+    document.getElementById('spPresentCount').textContent = present;
+    document.getElementById('spAbsentCount').textContent = absent;
+    document.getElementById('spAttendanceRate').textContent = avg + '%';
+    
+    const studentGrades = grades.filter(g => g.student_id === student.id);
+    const avgGrade = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
+    document.getElementById('spAvgGrade').textContent = avgGrade + '%';
+    document.getElementById('spGradeRank').textContent = rank;
+    
+    const totalFeesAmount = getStudentField(student, 'fees') || 0;
+    const paidFees = getStudentField(student, 'fees_paid') || 0;
+    const remainingFees = totalFeesAmount - paidFees;
+    document.getElementById('spTotalFees').textContent = totalFeesAmount;
+    document.getElementById('spPaidFees').textContent = paidFees;
+    document.getElementById('spRemainingFees').textContent = remainingFees;
+    
+    generateQRCode('spQRCode', studentCode);
+    
+    const gradesBody = document.getElementById('spGradesTableBody');
+    if (gradesBody) {
+        if (studentGrades.length === 0) {
+            gradesBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;padding:20px;">لا توجد درجات</td></tr>`;
+        } else {
+            gradesBody.innerHTML = studentGrades.map(g => {
+                return `<tr><td>${g.subject}</td><td><strong>${g.value}</strong></td><td>${new Date(g.date).toLocaleDateString('ar-EG')}</td></tr>`;
+            }).join('');
+        }
+    }
+    
+    const feesBody = document.getElementById('spFeesTableBody');
+    if (feesBody) {
+        if (!student.feesHistory || student.feesHistory.length === 0) {
+            feesBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;padding:20px;">لا توجد مدفوعات</td></tr>`;
+        } else {
+            feesBody.innerHTML = student.feesHistory.map(f => {
+                return `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong style="color:#4CAF50;">${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`;
+            }).join('');
+        }
+    }
+}
+
+function loadGrades(studentId) {
+    const tableBody = document.getElementById('gradesTableBody');
+    if (!tableBody) return;
+    const studentGrades = grades.filter(g => g.student_id === studentId);
+    if (studentGrades.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;">لا توجد درجات</td></tr>`;
+        return;
+    }
+    tableBody.innerHTML = studentGrades.map(g => {
+        return `<tr><td>${g.subject}</td><td><strong>${g.value}</strong></td><td>${new Date(g.date).toLocaleDateString('ar-EG')}</td></tr>`;
+    }).join('');
+}
+
+function loadFeesHistory(studentId) {
+    const tableBody = document.getElementById('feesTableBody');
+    if (!tableBody) return;
+    const student = students.find(s => s.id === studentId);
+    if (!student || !student.feesHistory || student.feesHistory.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#888;">لا توجد مدفوعات</td></tr>`;
+        return;
+    }
+    tableBody.innerHTML = student.feesHistory.map(f => {
+        return `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong style="color:#4CAF50;">${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`;
+    }).join('');
+}
+
+// ============================================================
+// Grades (مع Supabase) - معدلة
+// ============================================================
+
+async function addGrade() {
+    const subject = document.getElementById('gradeSubject').value;
+    const value = document.getElementById('gradeValue').value;
+    
+    if (!subject || !value) { 
+        alert('⚠️ من فضلك أدخل المادة والدرجة'); 
+        return; 
+    }
+    
+    if (value < 0 || value > 100) { 
+        alert('⚠️ الدرجة يجب أن تكون بين 0 و 100'); 
+        return; 
+    }
+    
+    if (!currentStudentId) {
+        alert('⚠️ لا يوجد طالب محدد');
+        return;
+    }
+    
+    try {
+        if (!supabaseClient) {
+            await initSupabaseClient();
+        }
+        
+        console.log('📤 جاري إضافة درجة للطالب:', currentStudentId);
+        
+        const { data, error } = await supabaseClient
+            .from('grades')
+            .insert([{
+                student_id: currentStudentId,
+                subject: subject,
+                value: parseInt(value),
+                date: new Date().toISOString()
+            }])
+            .select();
+        
+        if (error) {
+            console.error('❌ خطأ Supabase:', error);
+            saveGradeLocally(currentStudentId, subject, value);
+            return;
+        }
+        
+        console.log('✅ تم إضافة الدرجة:', data);
+        
+        if (data && data.length > 0) {
+            grades.unshift(data[0]);
+        } else {
+            const tempGrade = {
+                id: Date.now().toString(),
+                student_id: currentStudentId,
+                subject: subject,
+                value: parseInt(value),
+                date: new Date().toISOString()
+            };
+            grades.unshift(tempGrade);
+        }
+        
+        const student = students.find(s => s.id === currentStudentId);
+        if (student) {
+            if (parseInt(value) >= 90) {
+                student.points = (getStudentField(student, 'points') || 0) + 10;
+                await supabaseClient
+                    .from('students')
+                    .update({ points: student.points })
+                    .eq('id', student.id);
+                alert('⭐ +10 نقاط على الدرجة الممتازة!');
+            } else if (parseInt(value) >= 80) {
+                student.points = (getStudentField(student, 'points') || 0) + 5;
+                await supabaseClient
+                    .from('students')
+                    .update({ points: student.points })
+                    .eq('id', student.id);
+                alert('⭐ +5 نقاط على الدرجة الجيدة جداً!');
+            }
+            checkMedals(student);
+        }
+        
+        saveData();
+        loadProfileData();
+        updateHonorBoard();
+        updateLeaderboard();
+        alert('✅ تم إضافة الدرجة بنجاح');
+        
+        document.getElementById('gradeSubject').value = '';
+        document.getElementById('gradeValue').value = '';
+        
+    } catch (error) {
+        console.error('❌ Error adding grade:', error);
+        saveGradeLocally(currentStudentId, subject, value);
+    }
+}
+
+function saveGradeLocally(studentId, subject, value) {
+    try {
+        const tempGrade = {
+            id: Date.now().toString(),
+            student_id: studentId,
+            subject: subject,
+            value: parseInt(value),
+            date: new Date().toISOString()
+        };
+        grades.unshift(tempGrade);
+        
+        const student = students.find(s => s.id === studentId);
+        if (student) {
+            if (parseInt(value) >= 90) {
+                student.points = (getStudentField(student, 'points') || 0) + 10;
+            } else if (parseInt(value) >= 80) {
+                student.points = (getStudentField(student, 'points') || 0) + 5;
+            }
+            checkMedals(student);
+        }
+        
+        saveData();
+        loadProfileData();
+        updateHonorBoard();
+        updateLeaderboard();
+        alert('✅ تم إضافة الدرجة بنجاح (محلياً)');
+        
+        document.getElementById('gradeSubject').value = '';
+        document.getElementById('gradeValue').value = '';
+        
+        return true;
+    } catch (error) {
+        console.error('❌ فشل الحفظ المحلي:', error);
+        alert('⚠️ حدث خطأ في إضافة الدرجة: ' + error.message);
+        return false;
+    }
+}
+
+// ============================================================
+// Fees (مع Supabase) - معدلة
+// ============================================================
+
+async function addFees() {
+    const amount = document.getElementById('feesAmount').value;
+    const note = document.getElementById('feesNote').value || 'دفعة جديدة';
+    
+    if (!amount || amount <= 0) { 
+        alert('⚠️ من فضلك أدخل مبلغ صحيح'); 
+        return; 
+    }
+    
+    if (!currentStudentId) {
+        alert('⚠️ لا يوجد طالب محدد');
+        return;
+    }
+    
+    try {
+        if (!supabaseClient) {
+            await initSupabaseClient();
+        }
+        
+        console.log('📤 جاري إضافة مصاريف للطالب:', currentStudentId);
+        
+        const { data, error } = await supabaseClient
+            .from('fees_history')
+            .insert([{
+                student_id: currentStudentId,
+                amount: parseFloat(amount),
+                note: note,
+                date: new Date().toISOString()
+            }])
+            .select();
+        
+        if (error) {
+            console.error('❌ خطأ Supabase:', error);
+            saveFeesLocally(currentStudentId, amount, note);
+            return;
+        }
+        
+        console.log('✅ تم إضافة الدفعة:', data);
+        
+        const student = students.find(s => s.id === currentStudentId);
+        if (student) {
+            if (!student.feesHistory) student.feesHistory = [];
+            if (data && data.length > 0) {
+                student.feesHistory.push(data[0]);
+            } else {
+                const tempFee = {
+                    id: Date.now().toString(),
+                    student_id: currentStudentId,
+                    amount: parseFloat(amount),
+                    note: note,
+                    date: new Date().toISOString()
+                };
+                student.feesHistory.push(tempFee);
+            }
+            student.fees_paid = (getStudentField(student, 'fees_paid') || 0) + parseFloat(amount);
+            
+            await supabaseClient
+                .from('students')
+                .update({ fees_paid: student.fees_paid })
+                .eq('id', student.id);
+            saveData();
+        }
+        
+        loadProfileData();
+        alert('✅ تم إضافة الدفعة بنجاح');
+        
+        document.getElementById('feesAmount').value = '';
+        document.getElementById('feesNote').value = '';
+        
+    } catch (error) {
+        console.error('❌ Error adding fee:', error);
+        saveFeesLocally(currentStudentId, amount, note);
+    }
+}
+
+function saveFeesLocally(studentId, amount, note) {
+    try {
+        const student = students.find(s => s.id === studentId);
+        if (student) {
+            if (!student.feesHistory) student.feesHistory = [];
+            const tempFee = {
+                id: Date.now().toString(),
+                student_id: studentId,
+                amount: parseFloat(amount),
+                note: note,
+                date: new Date().toISOString()
+            };
+            student.feesHistory.push(tempFee);
+            student.fees_paid = (getStudentField(student, 'fees_paid') || 0) + parseFloat(amount);
+            saveData();
+            loadProfileData();
+            alert('✅ تم إضافة الدفعة بنجاح (محلياً)');
+            
+            document.getElementById('feesAmount').value = '';
+            document.getElementById('feesNote').value = '';
+        }
+    } catch (error) {
+        console.error('❌ فشل الحفظ المحلي:', error);
+        alert('⚠️ حدث خطأ في إضافة الدفعة: ' + error.message);
+    }
+}
+
+// ============================================================
+// Cards
+// ============================================================
+
+function loadCardStudents() {
+    const select = document.getElementById('cardStudentSelect');
+    if (!select) return;
+    select.innerHTML = '<option value="">-- اختر طالب --</option>';
+    students.forEach(s => {
+        const studentName = getStudentField(s, 'name') || 'غير معروف';
+        const studentCode = getStudentField(s, 'code') || '---';
+        select.innerHTML += `<option value="${s.id}">${studentName} (${studentCode})</option>`;
+    });
+    showAllCards();
+}
+
+function showCard() {
+    const select = document.getElementById('cardStudentSelect');
+    const studentId = select.value;
+    const container = document.getElementById('cardContainer');
+    if (!studentId) { container.style.display = 'none'; return; }
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    container.style.display = 'block';
+    
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentCode = getStudentField(student, 'code') || '---';
+    const studentPoints = getStudentField(student, 'points') || 0;
+    
+    document.getElementById('cardName').textContent = studentName;
+    document.getElementById('cardCode').textContent = studentCode;
+    document.getElementById('cardAvatar').textContent = getAvatar(studentId);
+    document.getElementById('cardPoints').textContent = studentPoints;
+    const group = groups.find(g => g.id === student.group_id);
+    document.getElementById('cardGroup').textContent = group ? group.name : 'غير محدد';
+    
+    generateQRCode('cardQRCode', studentCode);
+}
+
+function showAllCards() {
+    const container = document.getElementById('allCardsContainer');
+    if (!container) return;
+    if (students.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#888;">لا يوجد طلاب لعرض كارنيهاتهم</p>';
+        return;
+    }
+    
+    container.innerHTML = students.map(s => {
+        const group = groups.find(g => g.id === s.group_id);
+        const studentName = getStudentField(s, 'name') || 'غير معروف';
+        const studentCode = getStudentField(s, 'code') || '---';
+        const studentPoints = getStudentField(s, 'points') || 0;
+        return `
+            <div class="student-card" style="width:100%;">
+                <div class="card-header"><h2>📚 أكاديمية النجاح</h2><p>بطاقة تعريف طالب</p></div>
+                <div class="card-body">
+                    <div class="card-photo"><div class="card-avatar">${getAvatar(s.id)}</div></div>
+                    <div class="card-info">
+                        <p><strong>الاسم:</strong> ${studentName}</p>
+                        <p><strong>الكود:</strong> ${studentCode}</p>
+                        <p><strong>المجموعة:</strong> ${group ? group.name : 'غير محدد'}</p>
+                        <p><strong>⭐ نقاط:</strong> ${studentPoints}</p>
+                    </div>
+                    <div class="card-qr">
+                        <div id="cardQRCode-${s.id}"></div>
+                    </div>
+                </div>
+                <div class="card-footer"><p>✍️ توقيع المدير: _________________</p></div>
+            </div>
+        `;
+    }).join('');
+    
+    setTimeout(() => {
+        students.forEach(s => {
+            const studentCode = getStudentField(s, 'code') || '---';
+            generateQRCode(`cardQRCode-${s.id}`, studentCode);
+        });
+    }, 100);
+}
+
+function printCard() { window.print(); }
+function printSingleCard() { window.print(); }
+
+// ============================================================
+// PDF
+// ============================================================
+
+function generatePDF() {
+    const student = students.find(s => s.id === currentStudentId);
+    if (!student) { alert('⚠️ الطالب غير موجود'); return; }
+    
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentCode = getStudentField(student, 'code') || '---';
+    const studentPhone = getStudentField(student, 'phone') || 'غير مسجل';
+    const studentFees = getStudentField(student, 'fees') || 0;
+    const studentFeesPaid = getStudentField(student, 'fees_paid') || 0;
+    const studentPoints = getStudentField(student, 'points') || 0;
+    const studentStreak = getStudentField(student, 'streak') || 0;
+    
+    const studentAttendance = attendance.filter(a => a.student_id === currentStudentId);
+    const present = studentAttendance.filter(a => a.status === 'present').length;
+    const absent = studentAttendance.filter(a => a.status === 'absent').length;
+    const total = present + absent;
+    const average = total > 0 ? Math.round((present / total) * 100) : 0;
+    const studentGrades = grades.filter(g => g.student_id === currentStudentId);
+    const gradesAvg = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
+    const level = getLevelLabel(getStudentLevel(currentStudentId));
+    const rank = getStudentRank(currentStudentId);
+    const medals = getMedals(student);
+    const remainingFees = studentFees - studentFeesPaid;
+    const group = groups.find(g => g.id === student.group_id);
+    
+    let html = `
+        <html>
+        <head><title>تقرير الطالب - ${studentName}</title>
+        <style>
+            * { font-family: 'Cairo', Arial, sans-serif; }
+            body { background: white; padding: 40px; direction: rtl; }
+            .header { text-align: center; border-bottom: 3px solid #667eea; padding-bottom: 20px; }
+            .header h1 { color: #667eea; font-size: 28px; }
+            .header p { color: #666; font-size: 16px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 30px 0; }
+            .info-item { background: #f5f7fa; padding: 15px; border-radius: 10px; }
+            .info-item label { font-weight: bold; color: #555; }
+            .info-item span { float: left; color: #333; }
+            .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 30px 0; }
+            .stat-item { text-align: center; background: #f5f7fa; padding: 20px; border-radius: 10px; }
+            .stat-item .number { font-size: 30px; font-weight: bold; color: #667eea; }
+            .stat-item .label { color: #888; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            table th { background: #667eea; color: white; padding: 10px; text-align: right; }
+            table td { padding: 10px; border-bottom: 1px solid #eee; }
+            .footer { text-align: center; margin-top: 30px; color: #888; font-size: 14px; border-top: 1px solid #ddd; padding-top: 20px; }
+            .badge { display: inline-block; padding: 5px 15px; border-radius: 30px; font-weight: bold; float: left; }
+            .level-excellent { background: #f9a825; color: #000; }
+            .level-very-good { background: #4CAF50; color: #fff; }
+            .level-good { background: #42a5f5; color: #fff; }
+            .level-acceptable { background: #ff9800; color: #fff; }
+            .level-weak { background: #f44336; color: #fff; }
+            .medals { font-size: 24px; }
+        </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>📚 تقرير الطالب الشهري</h1>
+                <p>${new Date().toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })}</p>
+            </div>
+            <div class="info-grid">
+                <div class="info-item"><label>👤 اسم الطالب</label><span>${studentName}</span></div>
+                <div class="info-item"><label>🔑 الكود</label><span>${studentCode}</span></div>
+                <div class="info-item"><label>📋 المجموعة</label><span>${group ? group.name : 'غير محدد'}</span></div>
+                <div class="info-item"><label>🏆 المستوى</label><span class="badge ${getLevelClass(getStudentLevel(currentStudentId))}">${level}</span></div>
+                <div class="info-item"><label>⭐ النقاط</label><span>${studentPoints} نقطة</span></div>
+                <div class="info-item"><label>🥇 الترتيب</label><span>#${rank}</span></div>
+                <div class="info-item"><label>🏅 الميداليات</label><span class="medals">${medals.join(' ')}</span></div>
+                <div class="info-item"><label>📱 ولي الأمر</label><span>${studentPhone}</span></div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item"><div class="number">${present}</div><div class="label">✅ حضور</div></div>
+                <div class="stat-item"><div class="number">${absent}</div><div class="label">❌ غياب</div></div>
+                <div class="stat-item"><div class="number">${average}%</div><div class="label">📊 نسبة الحضور</div></div>
+                <div class="stat-item"><div class="number">${gradesAvg}</div><div class="label">📝 متوسط الدرجات</div></div>
+            </div>
+            <h3>📊 سجل الدرجات</h3>
+            ${studentGrades.length > 0 ? `
+            <table><thead><tr><th>المادة</th><th>الدرجة</th><th>التاريخ</th></tr></thead><tbody>
+                ${studentGrades.map(g => `<tr><td>${g.subject}</td><td><strong>${g.value}</strong></td><td>${new Date(g.date).toLocaleDateString('ar-EG')}</td></tr>`).join('')}
+            </tbody></table>` : '<p style="color:#888;">لا توجد درجات مسجلة</p>'}
+            <h3>💰 سجل المصاريف</h3>
+            ${student.feesHistory && student.feesHistory.length > 0 ? `
+            <table><thead><tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th></tr></thead><tbody>
+                ${student.feesHistory.map(f => `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong>${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`).join('')}
+            </tbody></table>
+            <p><strong>الإجمالي:</strong> ${studentFees} ج | <strong>المدفوع:</strong> ${studentFeesPaid} ج | <strong>المتبقي:</strong> ${remainingFees} ج</p>
+            ` : '<p style="color:#888;">لا توجد مدفوعات مسجلة</p>'}
+            <div class="footer">
+                <p>تم إنشاء هذا التقرير بواسطة نظام متابعة الطلاب</p>
+                <p>📅 ${new Date().toLocaleDateString('ar-EG')} - ${new Date().toLocaleTimeString('ar-EG')}</p>
+            </div>
+        </body>
+        </html>
+    `;
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
 }
