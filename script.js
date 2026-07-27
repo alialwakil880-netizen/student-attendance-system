@@ -1770,8 +1770,7 @@ function showCard() {
     const group = groups.find(g => g.id === student.group_id);
     document.getElementById('cardGroup').textContent = group ? group.name : 'غير محدد';
     
-    generateBarcode('cardBarcode', student.code);
-}
+generateQRCode('cardQRCode', student.code);}
 
 function showAllCards() {
     const container = document.getElementById('allCardsContainer');
