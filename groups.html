@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المجاميع</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <h2>📚 النظام</h2>
+            <ul>
+                <li onclick="window.location.href='dashboard.html'">📊 الرئيسية</li>
+                <li onclick="window.location.href='attendance.html'">✅ تسجيل الحضور</li>
+                <li onclick="window.location.href='students.html'">👨‍🎓 الطلاب</li>
+                <li class="active" onclick="window.location.href='groups.html'">📋 المجاميع</li>
+                <li onclick="window.location.href='card.html'">🪪 كارنيهات</li>
+                <li onclick="backupData()">💾 نسخ احتياطي</li>
+                <li onclick="restoreData()">📂 استعادة بيانات</li>
+                <li onclick="toggleDarkMode()">🌙 الوضع الداكن</li>
+                <li onclick="logout()">🚪 تسجيل خروج</li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>📋 إدارة المجاميع</h1>
+                <button onclick="showAddGroup()" class="btn-primary">➕ إضافة مجموعة</button>
+            </div>
+
+            <div id="addGroupForm" class="form-section" style="display:none;">
+                <h3>➕ إضافة مجموعة جديدة</h3>
+                <div class="form-group"><label>اسم المجموعة</label><input type="text" id="groupName" placeholder="مثال: مجموعة A"></div>
+                <div class="form-group"><label>موعد الحصة</label><input type="time" id="groupTime"></div>
+                <button onclick="saveGroup()" class="btn-primary">💾 حفظ</button>
+                <button onclick="hideAddGroup()" class="btn-danger">❌ إلغاء</button>
+            </div>
+
+            <div class="table-section">
+                <h3>📋 قائمة المجاميع</h3>
+                <table id="groupsTable">
+                    <thead><tr><th>#</th><th>اسم المجموعة</th><th>موعد الحصة</th><th>عدد الطلاب</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="groupsTableBody"><tr><td colspan="5" style="text-align:center;color:#888;">لا يوجد مجاميع</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

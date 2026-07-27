@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بروفايل الطالب</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <h2>📚 النظام</h2>
+            <ul>
+                <li onclick="window.location.href='dashboard.html'">📊 الرئيسية</li>
+                <li onclick="window.location.href='attendance.html'">✅ تسجيل الحضور</li>
+                <li onclick="window.location.href='students.html'">👨‍🎓 الطلاب</li>
+                <li onclick="window.location.href='groups.html'">📋 المجاميع</li>
+                <li onclick="window.location.href='card.html'">🪪 كارنيهات</li>
+                <li onclick="backupData()">💾 نسخ احتياطي</li>
+                <li onclick="restoreData()">📂 استعادة بيانات</li>
+                <li onclick="toggleDarkMode()">🌙 الوضع الداكن</li>
+                <li onclick="logout()">🚪 تسجيل خروج</li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>👤 بروفايل الطالب</h1>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="editStudentFromProfile()" class="btn-primary" style="background:#ff9800;">✏️ تعديل البيانات</button>
+                    <button onclick="window.location.href='students.html'" class="btn-secondary">🔙 رجوع</button>
+                </div>
+            </div>
+
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="profile-avatar">👨‍🎓</div>
+                    <div class="profile-info">
+                        <h2 id="profileName">اسم الطالب</h2>
+                        <p>📱 <span id="profilePhone">رقم الهاتف</span></p>
+                        <p>📋 <span id="profileGroup">المجموعة</span></p>
+                        <p>🔑 <strong>الكود: <span id="profileCode" style="color:#667eea;font-size:24px;"></span></strong></p>
+                        <p>💰 المصاريف الشهرية: <span id="profileFees">0</span> جنيه</p>
+                        <p>💳 المدفوع: <span id="profileFeesPaid">0</span> جنيه</p>
+                        <p>📊 المتبقي: <span id="profileFeesRemaining">0</span> جنيه</p>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+                            <button onclick="sendWhatsAppDirect(currentStudentId, 'present')" class="btn-primary" style="width:auto;padding:8px 15px;font-size:14px;">💬 واتساب حضور</button>
+                            <button onclick="sendWhatsAppDirect(currentStudentId, 'absent')" class="btn-danger" style="width:auto;padding:8px 15px;font-size:14px;">💬 واتساب غياب</button>
+                            <button onclick="sendMonthlyReportDirect(currentStudentId)" class="btn-primary" style="width:auto;padding:8px 15px;font-size:14px;background:#ff9800;">📊 تقرير شهري</button>
+                        </div>
+                    </div>
+                    <div class="profile-qr"><img id="qrCode" src="" alt="QR Code"><p style="font-size:12px;color:#888;margin-top:5px;">امسح الباركود لتسجيل الحضور</p></div>
+                </div>
+
+                <div class="profile-stats">
+                    <div class="profile-stat" style="background:#e8f5e9;"><h3 id="profilePresent" style="color:#27ae60;">0</h3><p>✅ حضور</p></div>
+                    <div class="profile-stat" style="background:#ffebee;"><h3 id="profileAbsent" style="color:#e74c3c;">0</h3><p>❌ غياب</p></div>
+                    <div class="profile-stat" style="background:#e3f2fd;"><h3 id="profileAverage" style="color:#1976d2;">0%</h3><p>📊 نسبة الحضور</p></div>
+                    <div class="profile-stat" style="background:#fff3e0;"><h3 id="profileTotalFees" style="color:#e65100;">0</h3><p>💰 إجمالي المصاريف</p></div>
+                    <div class="profile-stat" style="background:#fce4ec;"><h3 id="profileGradesCount" style="color:#c62828;">0</h3><p>📝 عدد الدرجات</p></div>
+                    <div class="profile-stat" style="background:#e8eaf6;"><h3 id="profileGradesAvg" style="color:#283593;">0%</h3><p>📊 متوسط الدرجات</p></div>
+                </div>
+
+                <div class="fees-section" style="background:#f5f7fa;padding:20px;border-radius:10px;margin-bottom:20px;">
+                    <h3>💰 تسجيل دفعة مصاريف</h3>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <div class="form-group" style="flex:1;min-width:150px;"><label>المبلغ</label><input type="number" id="feesAmount" placeholder="أدخل المبلغ"></div>
+                        <div class="form-group" style="flex:1;min-width:150px;"><label>ملاحظات</label><input type="text" id="feesNote" placeholder="ملاحظات"></div>
+                        <button onclick="addFees()" class="btn-primary" style="align-self:flex-end;width:auto;">💾 إضافة دفعة</button>
+                    </div>
+                </div>
+
+                <div class="fees-table" style="margin-bottom:20px;">
+                    <h3>📋 سجل المصاريف</h3>
+                    <table id="feesTable"><thead><tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th></tr></thead><tbody id="feesTableBody"><tr><td colspan="3" style="text-align:center;color:#888;">لا توجد مدفوعات</td></tr></tbody></table>
+                </div>
+
+                <div class="grades-section" style="background:#f5f7fa;padding:20px;border-radius:10px;margin-bottom:20px;">
+                    <h3>📝 إضافة درجة</h3>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <div class="form-group" style="flex:1;min-width:150px;"><label>المادة</label><input type="text" id="gradeSubject" placeholder="اسم المادة"></div>
+                        <div class="form-group" style="flex:1;min-width:150px;"><label>الدرجة</label><input type="number" id="gradeValue" placeholder="الدرجة من 100"></div>
+                        <button onclick="addGrade()" class="btn-primary" style="align-self:flex-end;width:auto;">💾 حفظ الدرجة</button>
+                    </div>
+                </div>
+
+                <div class="grades-table">
+                    <h3>📊 سجل الدرجات</h3>
+                    <table id="gradesTable"><thead><tr><th>المادة</th><th>الدرجة</th><th>التاريخ</th></tr></thead><tbody id="gradesTableBody"><tr><td colspan="3" style="text-align:center;color:#888;">لا توجد درجات</td></tr></tbody></table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

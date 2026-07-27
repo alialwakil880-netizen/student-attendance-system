@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام حضور وغياب الطلاب</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="eye-container">
+            <div class="eye"><div class="pupil"></div></div>
+            <div class="eye"><div class="pupil"></div></div>
+        </div>
+
+        <h1>📚 نظام متابعة الطلاب</h1>
+        <p class="subtitle">تسجيل الدخول</p>
+
+        <form id="loginForm">
+            <div class="input-group">
+                <label>👤 اسم المستخدم</label>
+                <input type="text" id="username" placeholder="أدخل اسم المستخدم" required>
+            </div>
+            <div class="input-group">
+                <label>🔒 كلمة المرور</label>
+                <input type="password" id="password" placeholder="أدخل كلمة المرور" required>
+            </div>
+            <button type="submit">🚀 دخول</button>
+        </form>
+
+        <div id="errorMessage" class="error"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

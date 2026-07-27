@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <h2>📚 النظام</h2>
+            <ul>
+                <li class="active" onclick="window.location.href='dashboard.html'">📊 الرئيسية</li>
+                <li onclick="window.location.href='attendance.html'">✅ تسجيل الحضور</li>
+                <li onclick="window.location.href='students.html'">👨‍🎓 الطلاب</li>
+                <li onclick="window.location.href='groups.html'">📋 المجاميع</li>
+                <li onclick="window.location.href='card.html'">🪪 كارنيهات</li>
+                <li onclick="backupData()">💾 نسخ احتياطي</li>
+                <li onclick="restoreData()">📂 استعادة بيانات</li>
+                <li onclick="toggleDarkMode()">🌙 الوضع الداكن</li>
+                <li onclick="logout()">🚪 تسجيل خروج</li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>📊 لوحة التحكم</h1>
+                <div class="user-info"><span id="userNameDisplay">👤 مدير</span></div>
+            </div>
+
+            <div id="alertContainer" class="alert-container"></div>
+
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon">👨‍🎓</div><div class="stat-info"><h3 id="totalStudents">0</h3><p>إجمالي الطلاب</p></div></div>
+                <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-info"><h3 id="presentToday">0</h3><p>الحضور اليوم</p></div></div>
+                <div class="stat-card"><div class="stat-icon">❌</div><div class="stat-info"><h3 id="absentToday">0</h3><p>الغياب اليوم</p></div></div>
+                <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-info"><h3 id="totalGroups">0</h3><p>عدد المجاميع</p></div></div>
+                <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-info"><h3 id="totalFees">0</h3><p>إجمالي المصاريف</p></div></div>
+                <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-info"><h3 id="attendanceRate">0%</h3><p>نسبة الحضور الكلية</p></div></div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card"><h3>📊 نسبة الحضور والغياب</h3><canvas id="attendanceChart"></canvas></div>
+                <div class="chart-card"><h3>📈 توزيع الدرجات</h3><canvas id="gradesChart"></canvas></div>
+                <div class="chart-card"><h3>📊 أداء المجاميع</h3><canvas id="groupsChart"></canvas></div>
+            </div>
+
+            <div class="recent-section">
+                <h2>🕒 آخر تسجيلات الحضور</h2>
+                <table id="recentAttendance">
+                    <thead><tr><th>الطالب</th><th>المجموعة</th><th>الحالة</th><th>الوقت</th></tr></thead>
+                    <tbody><tr><td colspan="4" style="text-align:center;color:#888;">لا توجد تسجيلات</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

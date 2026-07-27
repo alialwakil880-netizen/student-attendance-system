@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الطلاب</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <h2>📚 النظام</h2>
+            <ul>
+                <li onclick="window.location.href='dashboard.html'">📊 الرئيسية</li>
+                <li onclick="window.location.href='attendance.html'">✅ تسجيل الحضور</li>
+                <li class="active" onclick="window.location.href='students.html'">👨‍🎓 الطلاب</li>
+                <li onclick="window.location.href='groups.html'">📋 المجاميع</li>
+                <li onclick="window.location.href='card.html'">🪪 كارنيهات</li>
+                <li onclick="backupData()">💾 نسخ احتياطي</li>
+                <li onclick="restoreData()">📂 استعادة بيانات</li>
+                <li onclick="toggleDarkMode()">🌙 الوضع الداكن</li>
+                <li onclick="logout()">🚪 تسجيل خروج</li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>👨‍🎓 إدارة الطلاب</h1>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button onclick="showAddStudent()" class="btn-primary">➕ إضافة طالب</button>
+                    <button onclick="exportToExcel()" class="btn-primary" style="background:#27ae60;">📊 تصدير Excel</button>
+                </div>
+            </div>
+
+            <!-- نموذج إضافة طالب -->
+            <div id="addStudentForm" class="form-section" style="display:none;">
+                <h3>➕ إضافة طالب جديد</h3>
+                <div class="form-group"><label>اسم الطالب</label><input type="text" id="studentName" placeholder="أدخل اسم الطالب"></div>
+                <div class="form-group"><label>رقم الهاتف (ولي الأمر)</label><input type="text" id="studentPhone" placeholder="أدخل رقم ولي الأمر"></div>
+                <div class="form-group">
+                    <label>المجموعة</label>
+                    <select id="studentGroup"><option value="">-- اختر مجموعة --</option></select>
+                </div>
+                <div class="form-group"><label>💰 المصاريف الشهرية</label><input type="number" id="studentFees" placeholder="أدخل قيمة المصاريف"></div>
+                <button onclick="saveStudent()" class="btn-primary">💾 حفظ</button>
+                <button onclick="hideAddStudent()" class="btn-danger">❌ إلغاء</button>
+            </div>
+
+            <!-- نموذج تعديل طالب -->
+            <div id="editStudentForm" class="form-section" style="display:none;">
+                <h3>✏️ تعديل بيانات الطالب</h3>
+                <input type="hidden" id="editStudentId">
+                <div class="form-group"><label>اسم الطالب</label><input type="text" id="editStudentName" placeholder="أدخل اسم الطالب"></div>
+                <div class="form-group"><label>رقم الهاتف (ولي الأمر)</label><input type="text" id="editStudentPhone" placeholder="أدخل رقم ولي الأمر"></div>
+                <div class="form-group">
+                    <label>المجموعة</label>
+                    <select id="editStudentGroup"><option value="">-- اختر مجموعة --</option></select>
+                </div>
+                <div class="form-group"><label>💰 المصاريف الشهرية</label><input type="number" id="editStudentFees" placeholder="أدخل قيمة المصاريف"></div>
+                <button onclick="saveEditStudent()" class="btn-primary">💾 حفظ التعديلات</button>
+                <button onclick="hideEditStudent()" class="btn-danger">❌ إلغاء</button>
+            </div>
+
+            <!-- أدوات البحث -->
+            <div class="search-filters" style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
+                <div class="form-group" style="flex:1;min-width:150px;margin:0;">
+                    <input type="text" id="searchStudent" placeholder="🔍 بحث بالاسم أو الكود" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:16px;">
+                </div>
+                <div class="form-group" style="flex:1;min-width:150px;margin:0;">
+                    <select id="filterGroup" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:16px;">
+                        <option value="">📋 جميع المجاميع</option>
+                    </select>
+                </div>
+                <button onclick="filterStudents()" class="btn-primary" style="width:auto;">🔍 بحث</button>
+                <button onclick="clearFilters()" class="btn-secondary" style="width:auto;">🗑️ مسح</button>
+            </div>
+
+            <!-- جدول الطلاب -->
+            <div class="table-section">
+                <h3>📋 قائمة الطلاب</h3>
+                <table id="studentsTable">
+                    <thead><tr><th>#</th><th>الكود</th><th>الاسم</th><th>المجموعة</th><th>المصاريف</th><th>الباركود</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="studentsTableBody"><tr><td colspan="7" style="text-align:center;color:#888;">لا يوجد طلاب</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
