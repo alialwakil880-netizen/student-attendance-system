@@ -141,6 +141,36 @@ function logout() {
 }
 
 // ============================================================
+// Helper: Get Student Field
+// ============================================================
+
+function getStudentField(student, field) {
+    // محاولة الحصول على الحقل بأسماء مختلفة
+    const fieldMap = {
+        'name': ['name', 'student_name', 'full_name', 'studentName'],
+        'code': ['code', 'student_code', 'studentCode', 'student_id'],
+        'phone': ['phone', 'student_phone', 'studentPhone', 'phone_number'],
+        'group_id': ['group_id', 'groupId', 'group'],
+        'points': ['points', 'student_points', 'studentPoints'],
+        'streak': ['streak', 'student_streak', 'studentStreak'],
+        'fees': ['fees', 'student_fees', 'studentFees', 'fee'],
+        'fees_paid': ['fees_paid', 'student_fees_paid', 'studentFeesPaid', 'feesPaid'],
+        'is_star': ['is_star', 'isStar', 'star'],
+        'medals': ['medals', 'student_medals', 'studentMedals'],
+        'rewards': ['rewards', 'student_rewards', 'studentRewards'],
+        'avatar': ['avatar', 'student_avatar', 'studentAvatar']
+    };
+    
+    const possibleNames = fieldMap[field] || [field];
+    for (let name of possibleNames) {
+        if (student[name] !== undefined && student[name] !== null) {
+            return student[name];
+        }
+    }
+    return undefined;
+}
+
+// ============================================================
 // Load Data (من Supabase)
 // ============================================================
 
@@ -187,6 +217,10 @@ async function loadData() {
         grades = gradesData || [];
         
         console.log('✅ تم تحميل البيانات من Supabase. عدد الطلاب:', students.length);
+        if (students.length > 0) {
+            console.log('📊 أول طالب:', students[0]);
+            console.log('📋 الحقول المتاحة:', Object.keys(students[0]));
+        }
         
         // حفظ نسخة احتياطية في LocalStorage
         saveData();
@@ -302,7 +336,7 @@ function updateDashboard() {
     
     if (totalFees) {
         let allFees = 0;
-        students.forEach(s => allFees += (s.fees || 0));
+        students.forEach(s => allFees += (getStudentField(s, 'fees') || 0));
         totalFees.textContent = allFees + ' ج';
     }
     
@@ -344,7 +378,8 @@ function updateRecentAttendance() {
         const group = groups.find(g => g.id === a.group_id);
         const statusClass = a.status === 'present' ? 'status-present' : 'status-absent';
         const statusText = a.status === 'present' ? '✅ حاضر' : '❌ غائب';
-        return `<tr><td>${student ? student.name : 'غير معروف'}</td><td>${group ? group.name : 'غير معروف'}</td><td class="${statusClass}">${statusText}</td><td>${new Date(a.date).toLocaleTimeString('ar-EG')}</td></tr>`;
+        const studentName = student ? (getStudentField(student, 'name') || 'غير معروف') : 'غير معروف';
+        return `<tr><td>${studentName}</td><td>${group ? group.name : 'غير معروف'}</td><td class="${statusClass}">${statusText}</td><td>${new Date(a.date).toLocaleTimeString('ar-EG')}</td></tr>`;
     }).join('');
 }
 
@@ -368,15 +403,17 @@ function showAlerts() {
                 if (diffDays <= 3 && studentAttendance[i].status === 'absent') absentDays++;
             }
             if (absentDays >= 3) {
-                alerts.push({ type: 'danger', message: `⚠️ الطالب <strong>${student.name}</strong> غاب 3 أيام متتالية!` });
+                const studentName = getStudentField(student, 'name') || 'غير معروف';
+                alerts.push({ type: 'danger', message: `⚠️ الطالب <strong>${studentName}</strong> غاب 3 أيام متتالية!` });
             }
         }
         
-        const totalFees = student.fees || 0;
-        const paidFees = student.fees_paid || 0;
+        const totalFees = getStudentField(student, 'fees') || 0;
+        const paidFees = getStudentField(student, 'fees_paid') || 0;
         const remaining = totalFees - paidFees;
         if (totalFees > 0 && remaining > totalFees / 2) {
-            alerts.push({ type: 'warning', message: `💰 الطالب <strong>${student.name}</strong> متأخر في المصاريف (المتبقي: ${remaining} ج)` });
+            const studentName = getStudentField(student, 'name') || 'غير معروف';
+            alerts.push({ type: 'warning', message: `💰 الطالب <strong>${studentName}</strong> متأخر في المصاريف (المتبقي: ${remaining} ج)` });
         }
     });
     
@@ -461,7 +498,7 @@ function updateCharts() {
 }
 
 // ============================================================
-// QR CODE FUNCTIONS (بدلاً من الباركود)
+// QR CODE FUNCTIONS
 // ============================================================
 
 function generateQRCode(elementId, code) {
@@ -470,16 +507,27 @@ function generateQRCode(elementId, code) {
 
     element.innerHTML = "";
 
-    new QRCode(element, {
-        text: code,        // نخزن كود الطالب فقط
-        width: 80,
-        height: 80
-    });
+    try {
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(element, {
+                text: code,
+                width: 80,
+                height: 80
+            });
+        } else {
+            console.log('⏳ جاري تحميل مكتبة QR Code...');
+            setTimeout(() => generateQRCode(elementId, code), 500);
+        }
+    } catch (error) {
+        console.log("❌ خطأ في إنشاء QR Code:", error);
+        element.innerHTML = `<span style="font-size:12px;color:#888;">${code}</span>`;
+    }
 }
 
 function generateAllQRCodes() {
     students.forEach(s => {
-        generateQRCode(`qrcode-${s.id}`, s.code);
+        const code = getStudentField(s, 'code') || s.id || '---';
+        generateQRCode(`qrcode-${s.id}`, code);
     });
 }
 
@@ -519,7 +567,7 @@ async function saveStudent() {
     
     let lastCode = 1000;
     if (students.length > 0) {
-        const codes = students.map(s => parseInt(s.code) || 0);
+        const codes = students.map(s => parseInt(getStudentField(s, 'code')) || 0);
         lastCode = Math.max(...codes);
     }
     const newCode = lastCode + 1;
@@ -558,7 +606,6 @@ async function saveStudent() {
         if (data && data.length > 0) {
             students.unshift(data[0]);
         } else {
-            // لو Supabase مش شغال، نحفظ في LocalStorage مؤقتاً
             const tempStudent = {
                 id: Date.now().toString(),
                 ...student,
@@ -595,26 +642,36 @@ async function saveStudent() {
 function loadStudents() {
     const tableBody = document.getElementById('studentsTableBody');
     if (!tableBody) return;
-    if (students.length === 0) {
+    
+    console.log('🔄 جاري تحميل الطلاب، العدد:', students.length);
+    
+    if (!students || students.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#888;padding:30px;">📭 لا يوجد طلاب</td></tr>`;
         return;
     }
     
     tableBody.innerHTML = students.map((s, index) => {
+        // استخدام الدالة المساعدة للحصول على الحقول
+        const studentName = getStudentField(s, 'name') || 'غير معروف';
+        const studentCode = getStudentField(s, 'code') || '---';
+        const studentPoints = getStudentField(s, 'points') || 0;
+        const studentStreak = getStudentField(s, 'streak') || 0;
+        const studentFees = getStudentField(s, 'fees') || 0;
+        
         const group = groups.find(g => g.id === s.group_id);
+        const groupName = group ? group.name : 'غير محدد';
+        
         const level = getLevelLabel(getStudentLevel(s.id));
         const levelClass = getLevelClass(getStudentLevel(s.id));
-        const points = s.points || 0;
-        const streak = s.streak || 0;
         
         return `<tr>
             <td>${index + 1}</td>
-            <td><span style="font-size:20px;">${getAvatar(s.id)}</span> ${s.name}</td>
-            <td><strong>${s.code}</strong></td>
-            <td>${group ? group.name : 'غير محدد'}</td>
+            <td><span style="font-size:20px;">${getAvatar(s.id)}</span> ${studentName}</td>
+            <td><strong>${studentCode}</strong></td>
+            <td>${groupName}</td>
             <td><span class="level-badge ${levelClass}">${level}</span></td>
-            <td>⭐ ${points}</td>
-            <td>🔥 ${streak}</td>
+            <td>⭐ ${studentPoints}</td>
+            <td>🔥 ${studentStreak}</td>
             <td>
                 <div id="qrcode-${s.id}"></div>
             </td>
@@ -673,9 +730,9 @@ function editStudent(studentId) {
     }
     
     document.getElementById('editStudentId').value = studentId;
-    document.getElementById('editStudentName').value = student.name;
-    document.getElementById('editStudentPhone').value = student.phone || '';
-    document.getElementById('editStudentFees').value = student.fees || 0;
+    document.getElementById('editStudentName').value = getStudentField(student, 'name') || '';
+    document.getElementById('editStudentPhone').value = getStudentField(student, 'phone') || '';
+    document.getElementById('editStudentFees').value = getStudentField(student, 'fees') || 0;
     
     const select = document.getElementById('editStudentGroup');
     select.innerHTML = '<option value="">-- اختر مجموعة --</option>';
@@ -761,7 +818,11 @@ function filterStudents() {
     const filterGroup = document.getElementById('filterGroup').value;
     let filteredStudents = students;
     if (searchText) {
-        filteredStudents = filteredStudents.filter(s => s.name.toLowerCase().includes(searchText) || s.code.includes(searchText));
+        filteredStudents = filteredStudents.filter(s => {
+            const name = (getStudentField(s, 'name') || '').toLowerCase();
+            const code = (getStudentField(s, 'code') || '').toLowerCase();
+            return name.includes(searchText) || code.includes(searchText);
+        });
     }
     if (filterGroup) {
         filteredStudents = filteredStudents.filter(s => s.group_id === filterGroup);
@@ -772,26 +833,32 @@ function filterStudents() {
 function displayFilteredStudents(filteredStudents) {
     const tableBody = document.getElementById('studentsTableBody');
     if (!tableBody) return;
-    if (filteredStudents.length === 0) {
+    
+    if (!filteredStudents || filteredStudents.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#888;">❌ لا توجد نتائج مطابقة</td></tr>`;
         return;
     }
     
     tableBody.innerHTML = filteredStudents.map((s, index) => {
+        const studentName = getStudentField(s, 'name') || 'غير معروف';
+        const studentCode = getStudentField(s, 'code') || '---';
+        const studentPoints = getStudentField(s, 'points') || 0;
+        const studentStreak = getStudentField(s, 'streak') || 0;
+        
         const group = groups.find(g => g.id === s.group_id);
+        const groupName = group ? group.name : 'غير محدد';
+        
         const level = getLevelLabel(getStudentLevel(s.id));
         const levelClass = getLevelClass(getStudentLevel(s.id));
-        const points = s.points || 0;
-        const streak = s.streak || 0;
         
         return `<tr>
             <td>${index + 1}</td>
-            <td><span style="font-size:20px;">${getAvatar(s.id)}</span> ${s.name}</td>
-            <td><strong>${s.code}</strong></td>
-            <td>${group ? group.name : 'غير محدد'}</td>
+            <td><span style="font-size:20px;">${getAvatar(s.id)}</span> ${studentName}</td>
+            <td><strong>${studentCode}</strong></td>
+            <td>${groupName}</td>
             <td><span class="level-badge ${levelClass}">${level}</span></td>
-            <td>⭐ ${points}</td>
-            <td>🔥 ${streak}</td>
+            <td>⭐ ${studentPoints}</td>
+            <td>🔥 ${studentStreak}</td>
             <td>
                 <div id="qrcode-${s.id}"></div>
             </td>
@@ -833,16 +900,20 @@ function exportToExcel() {
     let csv = 'الكود,الاسم,المجموعة,المصاريف,المدفوع,المتبقي,النقاط,المستوى\n';
     students.forEach(s => {
         const group = groups.find(g => g.id === s.group_id);
-        const paid = s.fees_paid || 0;
-        const remaining = (s.fees || 0) - paid;
+        const paid = getStudentField(s, 'fees_paid') || 0;
+        const totalFees = getStudentField(s, 'fees') || 0;
+        const remaining = totalFees - paid;
         const level = getLevelLabel(getStudentLevel(s.id));
-        const points = s.points || 0;
-        csv += `${s.code},${s.name},${group ? group.name : 'غير محدد'},${s.fees || 0},${paid},${remaining},${points},${level}\n`;
+        const points = getStudentField(s, 'points') || 0;
+        const name = getStudentField(s, 'name') || 'غير معروف';
+        const code = getStudentField(s, 'code') || '---';
+        csv += `${code},${name},${group ? group.name : 'غير محدد'},${totalFees},${paid},${remaining},${points},${level}\n`;
     });
     csv += '\n\nسجل الحضور\nالطالب,الحالة,التاريخ\n';
     attendance.forEach(a => {
         const student = students.find(s => s.id === a.student_id);
-        csv += `${student ? student.name : 'غير معروف'},${a.status === 'present' ? 'حاضر' : 'غائب'},${new Date(a.date).toLocaleDateString('ar-EG')}\n`;
+        const studentName = student ? (getStudentField(student, 'name') || 'غير معروف') : 'غير معروف';
+        csv += `${studentName},${a.status === 'present' ? 'حاضر' : 'غائب'},${new Date(a.date).toLocaleDateString('ar-EG')}\n`;
     });
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -975,7 +1046,9 @@ function showManualAttendance() {
     if (select) {
         select.innerHTML = '<option value="">-- اختر طالب --</option>';
         students.forEach(s => {
-            select.innerHTML += `<option value="${s.id}">${s.name} (${s.code})</option>`;
+            const name = getStudentField(s, 'name') || 'غير معروف';
+            const code = getStudentField(s, 'code') || '---';
+            select.innerHTML += `<option value="${s.id}">${name} (${code})</option>`;
         });
     }
 }
@@ -1024,17 +1097,20 @@ async function saveManualAttendance() {
         }
         
         if (status === 'present') {
+            const currentStreak = getStudentField(student, 'streak') || 0;
+            const currentPoints = getStudentField(student, 'points') || 0;
+            
             const { error: updateError } = await supabaseClient
                 .from('students')
                 .update({ 
-                    streak: (student.streak || 0) + 1,
-                    points: (student.points || 0) + 5
+                    streak: currentStreak + 1,
+                    points: currentPoints + 5
                 })
                 .eq('id', studentId);
             
             if (!updateError) {
-                student.streak = (student.streak || 0) + 1;
-                student.points = (student.points || 0) + 5;
+                student.streak = currentStreak + 1;
+                student.points = currentPoints + 5;
                 checkMedals(student);
             }
         } else {
@@ -1095,7 +1171,6 @@ function startQRScanner() {
                 resultElement.style.color = '#4CAF50';
             }
             await markAttendanceByCode(decodedText);
-            // وقف المسح بعد أول قراءة
             scanner.stop();
             if (resultElement) {
                 resultElement.textContent = '⏹ تم إيقاف المسح';
@@ -1119,7 +1194,10 @@ function startQRScanner() {
 // ============================================================
 
 async function markAttendanceByCode(code) {
-    const student = students.find(s => s.code === code);
+    const student = students.find(s => {
+        const studentCode = getStudentField(s, 'code');
+        return studentCode === code;
+    });
 
     if (!student) {
         alert("❌ الطالب غير موجود");
@@ -1128,19 +1206,18 @@ async function markAttendanceByCode(code) {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // تحقق هل اتسجل قبل كده النهارده
     const already = attendance.find(a =>
         a.student_id === student.id &&
         a.date.startsWith(today)
     );
 
     if (already) {
-        alert(`⚠️ ${student.name} مسجل حضور بالفعل`);
+        const studentName = getStudentField(student, 'name') || 'غير معروف';
+        alert(`⚠️ ${studentName} مسجل حضور بالفعل`);
         return;
     }
 
     try {
-        // حفظ في Supabase
         const { error } = await supabaseClient
             .from('attendance')
             .insert([{
@@ -1156,9 +1233,9 @@ async function markAttendanceByCode(code) {
             return;
         }
 
-        alert(`✅ تم تسجيل حضور ${student.name}`);
+        const studentName = getStudentField(student, 'name') || 'غير معروف';
+        alert(`✅ تم تسجيل حضور ${studentName}`);
 
-        // تحديث البيانات المحلية
         attendance.push({
             student_id: student.id,
             group_id: student.group_id,
@@ -1166,11 +1243,12 @@ async function markAttendanceByCode(code) {
             date: new Date().toISOString()
         });
 
-        // تحديث النقاط والسلسلة
-        student.streak = (student.streak || 0) + 1;
-        student.points = (student.points || 0) + 5;
+        const currentStreak = getStudentField(student, 'streak') || 0;
+        const currentPoints = getStudentField(student, 'points') || 0;
         
-        // تحديث في Supabase
+        student.streak = currentStreak + 1;
+        student.points = currentPoints + 5;
+        
         await supabaseClient
             .from('students')
             .update({ 
@@ -1230,30 +1308,32 @@ function getLevelLabel(level) {
 function getLevelClass(level) { return `level-${level}`; }
 
 function getStudentRank(studentId) {
-    const sorted = [...students].sort((a, b) => (b.points || 0) - (a.points || 0));
+    const sorted = [...students].sort((a, b) => (getStudentField(b, 'points') || 0) - (getStudentField(a, 'points') || 0));
     const index = sorted.findIndex(s => s.id === studentId);
     return index + 1;
 }
 
 function getMedals(student) {
     const medals = [];
-    const points = student.points || 0;
+    const points = getStudentField(student, 'points') || 0;
+    const streak = getStudentField(student, 'streak') || 0;
     if (points >= 100) medals.push('🥇');
     if (points >= 50) medals.push('🥈');
     if (points >= 25) medals.push('🥉');
-    if (student.streak >= 10) medals.push('🔥');
-    if (student.streak >= 5) medals.push('⭐');
+    if (streak >= 10) medals.push('🔥');
+    if (streak >= 5) medals.push('⭐');
     return medals;
 }
 
 function checkMedals(student) {
-    const points = student.points || 0;
+    const points = getStudentField(student, 'points') || 0;
+    const streak = getStudentField(student, 'streak') || 0;
     const medals = [];
     if (points >= 100) medals.push('🥇 الذهبية');
     if (points >= 50) medals.push('🥈 الفضية');
     if (points >= 25) medals.push('🥉 البرونزية');
-    if (student.streak >= 10) medals.push('🔥 سلسلة 10 أيام');
-    if (student.streak >= 5) medals.push('⭐ سلسلة 5 أيام');
+    if (streak >= 10) medals.push('🔥 سلسلة 10 أيام');
+    if (streak >= 5) medals.push('⭐ سلسلة 5 أيام');
     if (medals.length > 0) {
         student.medals = medals;
         saveData();
@@ -1270,7 +1350,7 @@ function addPoints() {
         alert('⚠️ من فضلك أدخل رقم بين 1 و 10');
         return;
     }
-    student.points = (student.points || 0) + points;
+    student.points = (getStudentField(student, 'points') || 0) + points;
     checkMedals(student);
     saveData();
     loadProfileData();
@@ -1298,13 +1378,14 @@ function giveReward() {
     student.rewards = student.rewards || [];
     student.rewards.push({ reward: reward, date: new Date().toISOString() });
     saveData();
-    alert(`🎉 تم منح ${student.name} مكافأة: ${reward}`);
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    alert(`🎉 تم منح ${studentName} مكافأة: ${reward}`);
 }
 
 function updateLeaderboard() {
     const container = document.getElementById('leaderboardContainer');
     if (!container) return;
-    const sorted = [...students].sort((a, b) => (b.points || 0) - (a.points || 0));
+    const sorted = [...students].sort((a, b) => (getStudentField(b, 'points') || 0) - (getStudentField(a, 'points') || 0));
     if (sorted.length === 0) {
         container.innerHTML = '<p style="color:var(--text-secondary);">لا يوجد طلاب لعرض الترتيب</p>';
         return;
@@ -1312,12 +1393,15 @@ function updateLeaderboard() {
     container.innerHTML = sorted.slice(0, 10).map((s, i) => {
         const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+        const studentName = getStudentField(s, 'name') || 'غير معروف';
+        const studentPoints = getStudentField(s, 'points') || 0;
+        const studentStreak = getStudentField(s, 'streak') || 0;
         return `
             <div class="leaderboard-item">
                 <span class="rank ${rankClass}">${medal}</span>
-                <span class="name">${getAvatar(s.id)} ${s.name}</span>
-                <span class="points">⭐ ${s.points || 0}</span>
-                <span style="font-size:12px;color:var(--text-secondary);">🔥 ${s.streak || 0}</span>
+                <span class="name">${getAvatar(s.id)} ${studentName}</span>
+                <span class="points">⭐ ${studentPoints}</span>
+                <span style="font-size:12px;color:var(--text-secondary);">🔥 ${studentStreak}</span>
             </div>
         `;
     }).join('');
@@ -1332,13 +1416,14 @@ function updateHonorBoard() {
         return;
     }
     container.innerHTML = starStudents.map(s => {
-        const points = s.points || 0;
+        const points = getStudentField(s, 'points') || 0;
         const level = getLevelLabel(getStudentLevel(s.id));
         const medals = getMedals(s);
+        const studentName = getStudentField(s, 'name') || 'غير معروف';
         return `
             <div class="honor-card">
                 <span class="honor-icon">${getAvatar(s.id)}</span>
-                <div class="honor-name">${s.name}</div>
+                <div class="honor-name">${studentName}</div>
                 <div class="honor-points">⭐ ${points} نقطة</div>
                 <div style="font-size:12px;color:var(--text-secondary);">المستوى: ${level}</div>
                 <div style="font-size:14px;">${medals.join(' ')}</div>
@@ -1372,7 +1457,11 @@ function showLevels() {
                 <div class="level-group">
                     <h3>${levelNames[key]} (${levels[key].length} طالب)</h3>
                     <div class="level-students">
-                        ${levels[key].map(s => `<span class="level-student-tag">${getAvatar(s.id)} ${s.name} (${s.code})</span>`).join('')}
+                        ${levels[key].map(s => {
+                            const studentName = getStudentField(s, 'name') || 'غير معروف';
+                            const studentCode = getStudentField(s, 'code') || '---';
+                            return `<span class="level-student-tag">${getAvatar(s.id)} ${studentName} (${studentCode})</span>`;
+                        }).join('')}
                     </div>
                 </div>
             `;
@@ -1401,19 +1490,24 @@ function showLeaderboard() {
 function sendWhatsAppDirect(studentId, status) {
     const student = students.find(s => s.id === studentId);
     if (!student) { alert('⚠️ الطالب غير موجود'); return; }
-    if (!student.phone) { alert('⚠️ هذا الطالب ليس لديه رقم هاتف مسجل'); return; }
+    const phone = getStudentField(student, 'phone');
+    if (!phone) { alert('⚠️ هذا الطالب ليس لديه رقم هاتف مسجل'); return; }
     const statusText = status === 'present' ? '✅ حضر' : '❌ غاب';
-    const message = `📚 *إشعار حضور وغياب*\n\nالطالب: ${student.name}\nالكود: ${student.code}\nالحالة: ${statusText}\nالتاريخ: ${new Date().toLocaleDateString('ar-EG')}\nالوقت: ${new Date().toLocaleTimeString('ar-EG')}\n⭐ النقاط: ${student.points || 0}\n\nشكراً لمتابعتكم`;
-    let phone = student.phone.replace(/\D/g, '');
-    if (phone.startsWith('0')) phone = phone.substring(1);
-    if (!phone.startsWith('2')) phone = '2' + phone;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentCode = getStudentField(student, 'code') || '---';
+    const studentPoints = getStudentField(student, 'points') || 0;
+    const message = `📚 *إشعار حضور وغياب*\n\nالطالب: ${studentName}\nالكود: ${studentCode}\nالحالة: ${statusText}\nالتاريخ: ${new Date().toLocaleDateString('ar-EG')}\nالوقت: ${new Date().toLocaleTimeString('ar-EG')}\n⭐ النقاط: ${studentPoints}\n\nشكراً لمتابعتكم`;
+    let phoneNumber = phone.replace(/\D/g, '');
+    if (phoneNumber.startsWith('0')) phoneNumber = phoneNumber.substring(1);
+    if (!phoneNumber.startsWith('2')) phoneNumber = '2' + phoneNumber;
+    window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
 }
 
 function sendMonthlyReportDirect(studentId) {
     const student = students.find(s => s.id === studentId);
     if (!student) { alert('⚠️ الطالب غير موجود'); return; }
-    if (!student.phone) { alert('⚠️ هذا الطالب ليس لديه رقم هاتف مسجل'); return; }
+    const phone = getStudentField(student, 'phone');
+    if (!phone) { alert('⚠️ هذا الطالب ليس لديه رقم هاتف مسجل'); return; }
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthAttendance = attendance.filter(a => a.student_id === studentId && new Date(a.date) >= monthStart);
@@ -1423,11 +1517,16 @@ function sendMonthlyReportDirect(studentId) {
     const average = total > 0 ? Math.round((present / total) * 100) : 0;
     const studentGrades = grades.filter(g => g.student_id === studentId);
     const gradesList = studentGrades.map(g => `${g.subject}: ${g.value}`).join('\n');
-    const message = `📊 *تقرير شهري - ${student.name}*\n\n📅 الشهر: ${now.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })}\n✅ الحضور: ${present}\n❌ الغياب: ${absent}\n📊 نسبة الحضور: ${average}%\n⭐ النقاط: ${student.points || 0}\n\n📝 *الدرجات:*\n${gradesList || 'لا توجد درجات'}\n\n💰 المصاريف:\nالإجمالي: ${student.fees || 0} ج\nالمدفوع: ${student.fees_paid || 0} ج\nالمتبقي: ${(student.fees || 0) - (student.fees_paid || 0)} ج\n\nشكراً لمتابعتكم`;
-    let phone = student.phone.replace(/\D/g, '');
-    if (phone.startsWith('0')) phone = phone.substring(1);
-    if (!phone.startsWith('2')) phone = '2' + phone;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentPoints = getStudentField(student, 'points') || 0;
+    const totalFees = getStudentField(student, 'fees') || 0;
+    const paidFees = getStudentField(student, 'fees_paid') || 0;
+    const remainingFees = totalFees - paidFees;
+    const message = `📊 *تقرير شهري - ${studentName}*\n\n📅 الشهر: ${now.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })}\n✅ الحضور: ${present}\n❌ الغياب: ${absent}\n📊 نسبة الحضور: ${average}%\n⭐ النقاط: ${studentPoints}\n\n📝 *الدرجات:*\n${gradesList || 'لا توجد درجات'}\n\n💰 المصاريف:\nالإجمالي: ${totalFees} ج\nالمدفوع: ${paidFees} ج\nالمتبقي: ${remainingFees} ج\n\nشكراً لمتابعتكم`;
+    let phoneNumber = phone.replace(/\D/g, '');
+    if (phoneNumber.startsWith('0')) phoneNumber = phoneNumber.substring(1);
+    if (!phoneNumber.startsWith('2')) phoneNumber = '2' + phoneNumber;
+    window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
 }
 
 // ============================================================
@@ -1453,7 +1552,10 @@ function loadProfileData() {
     let student;
 
     if (code) {
-        student = students.find(s => s.code === code);
+        student = students.find(s => {
+            const studentCode = getStudentField(s, 'code');
+            return studentCode === code;
+        });
     } else {
         const studentId = localStorage.getItem("viewStudentId");
         student = students.find(s => s.id === studentId);
@@ -1467,19 +1569,21 @@ function loadProfileData() {
 
     currentStudentId = student.id;
     const group = groups.find(g => g.id === student.group_id);
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentPhone = getStudentField(student, 'phone') || 'غير محدد';
+    const studentCode = getStudentField(student, 'code') || 'غير محدد';
+    const totalFees = getStudentField(student, 'fees') || 0;
+    const points = getStudentField(student, 'points') || 0;
+    const streak = getStudentField(student, 'streak') || 0;
 
-    document.getElementById('profileName').textContent = student.name;
-    document.getElementById('profilePhone').textContent = student.phone || 'غير محدد';
+    document.getElementById('profileName').textContent = studentName;
+    document.getElementById('profilePhone').textContent = studentPhone;
     document.getElementById('profileGroup').textContent = group ? group.name : 'غير محدد';
-    document.getElementById('profileCode').textContent = student.code || 'غير محدد';
+    document.getElementById('profileCode').textContent = studentCode;
     document.getElementById('profileAvatar').textContent = getAvatar(student.id);
-    
-    const totalFees = student.fees || 0;
     document.getElementById('profileFees').textContent = totalFees;
     
-    const points = student.points || 0;
     const rank = getStudentRank(student.id);
-    const streak = student.streak || 0;
     const medals = getMedals(student);
     
     document.getElementById('profilePoints').textContent = points;
@@ -1509,7 +1613,7 @@ function loadProfileData() {
     document.getElementById('profileGradesCount').textContent = studentGrades.length;
     document.getElementById('profileGradesAvg').textContent = avg + '%';
     
-    generateQRCode('profileQRCode', student.code);
+    generateQRCode('profileQRCode', studentCode);
     
     loadGrades(student.id);
     loadFeesHistory(student.id);
@@ -1530,7 +1634,11 @@ function loadStudentFromQR() {
         return;
     }
     
-    const student = students.find(s => s.code === code);
+    const student = students.find(s => {
+        const studentCode = getStudentField(s, 'code');
+        return studentCode === code;
+    });
+    
     if (!student) {
         document.getElementById('studentProfileCard').innerHTML = `
             <div style="text-align:center;padding:40px;">
@@ -1544,17 +1652,21 @@ function loadStudentFromQR() {
     
     currentStudentId = student.id;
     const group = groups.find(g => g.id === student.group_id);
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentPhone = getStudentField(student, 'phone') || 'غير محدد';
+    const studentCode = getStudentField(student, 'code') || 'غير محدد';
+    const totalFees = getStudentField(student, 'fees') || 0;
+    const points = getStudentField(student, 'points') || 0;
+    const streak = getStudentField(student, 'streak') || 0;
     
     document.getElementById('spAvatar').textContent = getAvatar(student.id);
-    document.getElementById('spName').textContent = student.name;
-    document.getElementById('spPhone').textContent = student.phone || 'غير محدد';
+    document.getElementById('spName').textContent = studentName;
+    document.getElementById('spPhone').textContent = studentPhone;
     document.getElementById('spGroup').textContent = group ? group.name : 'غير محدد';
-    document.getElementById('spCode').textContent = student.code || 'غير محدد';
-    document.getElementById('spFees').textContent = student.fees || 0;
+    document.getElementById('spCode').textContent = studentCode;
+    document.getElementById('spFees').textContent = totalFees;
     
-    const points = student.points || 0;
     const rank = getStudentRank(student.id);
-    const streak = student.streak || 0;
     const medals = getMedals(student);
     
     document.getElementById('spPoints').textContent = points;
@@ -1581,14 +1693,14 @@ function loadStudentFromQR() {
     document.getElementById('spAvgGrade').textContent = avgGrade + '%';
     document.getElementById('spGradeRank').textContent = rank;
     
-    const totalFees = student.fees || 0;
-    const paidFees = student.fees_paid || 0;
-    const remainingFees = totalFees - paidFees;
-    document.getElementById('spTotalFees').textContent = totalFees;
+    const totalFeesAmount = getStudentField(student, 'fees') || 0;
+    const paidFees = getStudentField(student, 'fees_paid') || 0;
+    const remainingFees = totalFeesAmount - paidFees;
+    document.getElementById('spTotalFees').textContent = totalFeesAmount;
     document.getElementById('spPaidFees').textContent = paidFees;
     document.getElementById('spRemainingFees').textContent = remainingFees;
     
-    generateQRCode('spQRCode', student.code);
+    generateQRCode('spQRCode', studentCode);
     
     const gradesBody = document.getElementById('spGradesTableBody');
     if (gradesBody) {
@@ -1676,14 +1788,14 @@ async function addGrade() {
         
         const student = students.find(s => s.id === currentStudentId);
         if (student && parseInt(value) >= 90) {
-            student.points = (student.points || 0) + 10;
+            student.points = (getStudentField(student, 'points') || 0) + 10;
             await supabaseClient
                 .from('students')
                 .update({ points: student.points })
                 .eq('id', student.id);
             alert('⭐ +10 نقاط على الدرجة الممتازة!');
         } else if (student && parseInt(value) >= 80) {
-            student.points = (student.points || 0) + 5;
+            student.points = (getStudentField(student, 'points') || 0) + 5;
             await supabaseClient
                 .from('students')
                 .update({ points: student.points })
@@ -1743,7 +1855,7 @@ async function addFees() {
                 };
                 student.feesHistory.push(tempFee);
             }
-            student.fees_paid = (student.fees_paid || 0) + parseFloat(amount);
+            student.fees_paid = (getStudentField(student, 'fees_paid') || 0) + parseFloat(amount);
             
             await supabaseClient
                 .from('students')
@@ -1773,7 +1885,9 @@ function loadCardStudents() {
     if (!select) return;
     select.innerHTML = '<option value="">-- اختر طالب --</option>';
     students.forEach(s => {
-        select.innerHTML += `<option value="${s.id}">${s.name} (${s.code})</option>`;
+        const studentName = getStudentField(s, 'name') || 'غير معروف';
+        const studentCode = getStudentField(s, 'code') || '---';
+        select.innerHTML += `<option value="${s.id}">${studentName} (${studentCode})</option>`;
     });
     showAllCards();
 }
@@ -1787,14 +1901,18 @@ function showCard() {
     if (!student) return;
     container.style.display = 'block';
     
-    document.getElementById('cardName').textContent = student.name;
-    document.getElementById('cardCode').textContent = student.code;
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentCode = getStudentField(student, 'code') || '---';
+    const studentPoints = getStudentField(student, 'points') || 0;
+    
+    document.getElementById('cardName').textContent = studentName;
+    document.getElementById('cardCode').textContent = studentCode;
     document.getElementById('cardAvatar').textContent = getAvatar(studentId);
-    document.getElementById('cardPoints').textContent = student.points || 0;
+    document.getElementById('cardPoints').textContent = studentPoints;
     const group = groups.find(g => g.id === student.group_id);
     document.getElementById('cardGroup').textContent = group ? group.name : 'غير محدد';
     
-    generateQRCode('cardQRCode', student.code);
+    generateQRCode('cardQRCode', studentCode);
 }
 
 function showAllCards() {
@@ -1807,17 +1925,19 @@ function showAllCards() {
     
     container.innerHTML = students.map(s => {
         const group = groups.find(g => g.id === s.group_id);
-        const points = s.points || 0;
+        const studentName = getStudentField(s, 'name') || 'غير معروف';
+        const studentCode = getStudentField(s, 'code') || '---';
+        const studentPoints = getStudentField(s, 'points') || 0;
         return `
             <div class="student-card" style="width:100%;">
                 <div class="card-header"><h2>📚 أكاديمية النجاح</h2><p>بطاقة تعريف طالب</p></div>
                 <div class="card-body">
                     <div class="card-photo"><div class="card-avatar">${getAvatar(s.id)}</div></div>
                     <div class="card-info">
-                        <p><strong>الاسم:</strong> ${s.name}</p>
-                        <p><strong>الكود:</strong> ${s.code}</p>
+                        <p><strong>الاسم:</strong> ${studentName}</p>
+                        <p><strong>الكود:</strong> ${studentCode}</p>
                         <p><strong>المجموعة:</strong> ${group ? group.name : 'غير محدد'}</p>
-                        <p><strong>⭐ نقاط:</strong> ${points}</p>
+                        <p><strong>⭐ نقاط:</strong> ${studentPoints}</p>
                     </div>
                     <div class="card-qr">
                         <div id="cardQRCode-${s.id}"></div>
@@ -1830,7 +1950,8 @@ function showAllCards() {
     
     setTimeout(() => {
         students.forEach(s => {
-            generateQRCode(`cardQRCode-${s.id}`, s.code);
+            const studentCode = getStudentField(s, 'code') || '---';
+            generateQRCode(`cardQRCode-${s.id}`, studentCode);
         });
     }, 100);
 }
@@ -1846,6 +1967,14 @@ function generatePDF() {
     const student = students.find(s => s.id === currentStudentId);
     if (!student) { alert('⚠️ الطالب غير موجود'); return; }
     
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentCode = getStudentField(student, 'code') || '---';
+    const studentPhone = getStudentField(student, 'phone') || 'غير مسجل';
+    const studentFees = getStudentField(student, 'fees') || 0;
+    const studentFeesPaid = getStudentField(student, 'fees_paid') || 0;
+    const studentPoints = getStudentField(student, 'points') || 0;
+    const studentStreak = getStudentField(student, 'streak') || 0;
+    
     const studentAttendance = attendance.filter(a => a.student_id === currentStudentId);
     const present = studentAttendance.filter(a => a.status === 'present').length;
     const absent = studentAttendance.filter(a => a.status === 'absent').length;
@@ -1854,13 +1983,14 @@ function generatePDF() {
     const studentGrades = grades.filter(g => g.student_id === currentStudentId);
     const gradesAvg = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
     const level = getLevelLabel(getStudentLevel(currentStudentId));
-    const points = student.points || 0;
     const rank = getStudentRank(currentStudentId);
     const medals = getMedals(student);
+    const remainingFees = studentFees - studentFeesPaid;
+    const group = groups.find(g => g.id === student.group_id);
     
     let html = `
         <html>
-        <head><title>تقرير الطالب - ${student.name}</title>
+        <head><title>تقرير الطالب - ${studentName}</title>
         <style>
             * { font-family: 'Cairo', Arial, sans-serif; }
             body { background: white; padding: 40px; direction: rtl; }
@@ -1894,14 +2024,14 @@ function generatePDF() {
                 <p>${new Date().toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })}</p>
             </div>
             <div class="info-grid">
-                <div class="info-item"><label>👤 اسم الطالب</label><span>${student.name}</span></div>
-                <div class="info-item"><label>🔑 الكود</label><span>${student.code}</span></div>
-                <div class="info-item"><label>📋 المجموعة</label><span>${groups.find(g => g.id === student.group_id)?.name || 'غير محدد'}</span></div>
+                <div class="info-item"><label>👤 اسم الطالب</label><span>${studentName}</span></div>
+                <div class="info-item"><label>🔑 الكود</label><span>${studentCode}</span></div>
+                <div class="info-item"><label>📋 المجموعة</label><span>${group ? group.name : 'غير محدد'}</span></div>
                 <div class="info-item"><label>🏆 المستوى</label><span class="badge ${getLevelClass(getStudentLevel(currentStudentId))}">${level}</span></div>
-                <div class="info-item"><label>⭐ النقاط</label><span>${points} نقطة</span></div>
+                <div class="info-item"><label>⭐ النقاط</label><span>${studentPoints} نقطة</span></div>
                 <div class="info-item"><label>🥇 الترتيب</label><span>#${rank}</span></div>
                 <div class="info-item"><label>🏅 الميداليات</label><span class="medals">${medals.join(' ')}</span></div>
-                <div class="info-item"><label>📱 ولي الأمر</label><span>${student.phone || 'غير مسجل'}</span></div>
+                <div class="info-item"><label>📱 ولي الأمر</label><span>${studentPhone}</span></div>
             </div>
             <div class="stats-grid">
                 <div class="stat-item"><div class="number">${present}</div><div class="label">✅ حضور</div></div>
@@ -1919,7 +2049,7 @@ function generatePDF() {
             <table><thead><tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th></tr></thead><tbody>
                 ${student.feesHistory.map(f => `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong>${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`).join('')}
             </tbody></table>
-            <p><strong>الإجمالي:</strong> ${student.fees || 0} ج | <strong>المدفوع:</strong> ${student.fees_paid || 0} ج | <strong>المتبقي:</strong> ${(student.fees || 0) - (student.fees_paid || 0)} ج</p>
+            <p><strong>الإجمالي:</strong> ${studentFees} ج | <strong>المدفوع:</strong> ${studentFeesPaid} ج | <strong>المتبقي:</strong> ${remainingFees} ج</p>
             ` : '<p style="color:#888;">لا توجد مدفوعات مسجلة</p>'}
             <div class="footer">
                 <p>تم إنشاء هذا التقرير بواسطة نظام متابعة الطلاب</p>
