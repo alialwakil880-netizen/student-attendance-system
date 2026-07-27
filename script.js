@@ -3045,12 +3045,10 @@ async function markAttendanceById(studentId) {
     }
 }function downloadParentQR() {
 
-    const url = parentUrl; // أو نفس الرابط اللي بتحطه في الـQR
+    const temp = document.createElement("div");
 
-    const div = document.createElement("div");
-
-    new QRCode(div, {
-        text: url,
+    new QRCode(temp, {
+        text: window.currentParentQRUrl,
         width: 1000,
         height: 1000,
         correctLevel: QRCode.CorrectLevel.H
@@ -3058,13 +3056,31 @@ async function markAttendanceById(studentId) {
 
     setTimeout(() => {
 
-        const canvas = div.querySelector("canvas");
+        const qrCanvas = temp.querySelector("canvas");
 
-        const link = document.createElement("a");
-        link.download = "QR.png";
-        link.href = canvas.toDataURL("image/png");
+        // إنشاء صورة بيضاء كبيرة
+        const canvas = document.createElement("canvas");
+        canvas.width = 1200;
+        canvas.height = 1400;
+
+        const ctx = canvas.getContext("2d");
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0,0,1200,1400);
+
+        // رسم الـQR
+        ctx.drawImage(qrCanvas,100,100,1000,1000);
+
+        // الكود تحت الـQR
+        ctx.fillStyle="#000";
+        ctx.font="bold 70px Arial";
+        ctx.textAlign="center";
+        ctx.fillText(window.currentParentStudentCode,600,1240);
+
+        const link=document.createElement("a");
+        link.download=`${window.currentParentStudentCode}.png`;
+        link.href=canvas.toDataURL("image/png");
         link.click();
 
     },300);
-
 }
