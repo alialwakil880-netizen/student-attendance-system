@@ -2846,18 +2846,30 @@ function generateParentQRCode(studentId) {
     qrElement.id = 'parentQRCode';
     qrContainer.appendChild(qrElement);
     
-    showQRModal('📱 كود ولي الأمر', qrContainer, studentName, studentCode);
-    
-    try {
-        new QRCode(document.getElementById('parentQRCode'), {
-            text: parentUrl,
-            width: 200,
-            height: 200
-        });
-    } catch (error) {
-        console.error('❌ خطأ في إنشاء QR Code:', error);
-        alert('⚠️ حدث خطأ في إنشاء QR Code');
-    }
+   showQRModal('📱 كود ولي الأمر', qrContainer, studentName, studentCode);
+
+try {
+    new QRCode(document.getElementById('parentQRCode'), {
+        text: parentUrl,
+        width: 200,
+        height: 200
+    });
+
+    // ⬇️ حط الكود هنا
+    setTimeout(() => {
+        const qrDiv = document.getElementById("parentQRCode");
+
+        qrDiv.insertAdjacentHTML("afterend", `
+            <button onclick="downloadParentQR()" class="btn-primary" style="margin-top:10px;">
+                ⬇️ تحميل QR
+            </button>
+        `);
+    }, 300);
+
+} catch (error) {
+    console.error('❌ خطأ في إنشاء QR Code:', error);
+    alert('⚠️ حدث خطأ في إنشاء QR Code');
+}
 }
 
 // ============================================================
