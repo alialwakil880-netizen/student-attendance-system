@@ -6,8 +6,8 @@
     <title>كارنيهات الطلاب</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script></head>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+</head>
 <body>
     <div class="page-transition">
         <div class="dashboard-container">
@@ -51,7 +51,7 @@
                                 <p><strong>⭐ نقاط:</strong> <span id="cardPoints">0</span></p>
                             </div>
                             <div class="card-qr">
-                                <svg id="cardBarcode" class="barcode-svg"></svg>
+                               <div id="cardQRCode"></div>
                             </div>
                         </div>
                         <div class="card-footer"><p>✍️ توقيع المدير: _________________</p></div>
