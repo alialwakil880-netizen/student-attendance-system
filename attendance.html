@@ -6,7 +6,7 @@
     <title>تسجيل الحضور</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
     <div class="page-transition">
@@ -55,11 +55,11 @@
                 <div id="cameraAttendance" class="attendance-section" style="display:none;">
                     <h3>📷 مسح QR</h3>
                     <p style="color:#888;margin-bottom:10px;">ضع الـ QR أمام الكاميرا للتسجيل التلقائي</p>
-                    <div id="reader" style="width:300px;margin:auto;"></div>
-                    <button onclick="startQRScanner()" class="btn-primary" style="margin-top:15px;">
-                        📷 بدء المسح
-                    </button>
-                    <button onclick="stopCameraReader()" class="btn-danger" style="margin-top:10px;">⏹ إيقاف الكاميرا</button>
+                    <div id="reader" style="width:100%;max-width:400px;margin:0 auto;"></div>
+                    <div style="display:flex;gap:10px;justify-content:center;margin-top:15px;flex-wrap:wrap;">
+                        <button onclick="startQRScanner()" class="btn-primary">📷 بدء المسح</button>
+                        <button onclick="stopCameraReader()" class="btn-danger">⏹ إيقاف الكاميرا</button>
+                    </div>
                     <div id="scanResult" class="scan-result"></div>
                 </div>
             </div>
