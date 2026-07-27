@@ -243,6 +243,24 @@
             font-weight: 600;
         }
         
+        .parent-loading {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .parent-loading .spinner {
+            font-size: 48px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         @media print {
             .parent-back-btn { display: none; }
             .parent-header { background: #667eea !important; -webkit-text-fill-color: white !important; }
@@ -265,7 +283,11 @@
             </div>
 
             <div id="parentContent">
-                <!-- سيتم ملؤه بواسطة JavaScript -->
+                <div class="parent-loading">
+                    <div class="spinner">⏳</div>
+                    <h3>جاري تحميل بيانات الطالب...</h3>
+                    <p style="color:#888;">يرجى الانتظار</p>
+                </div>
             </div>
 
             <div class="parent-footer">
@@ -277,7 +299,9 @@
     </div>
     <script src="script.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initSupabaseClient();
+            await loadData();
             loadParentData();
         });
     </script>
