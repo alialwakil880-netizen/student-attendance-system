@@ -2631,5 +2631,218 @@ function loadStudentFromQR() {
                 return `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong style="color:#4CAF50;">${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`;
             }).join('');
         }
+        // ============================================================
+// PARENT PORTAL QR - إنشاء QR لولي الأمر
+// ============================================================
+
+function generateParentQRCode(studentId) {
+    const student = students.find(s => s.id === studentId);
+    if (!student) {
+        alert('⚠️ الطالب غير موجود');
+        return;
+    }
+    
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentCode = getStudentField(student, 'code') || '---';
+    
+    // إنشاء رابط ولي الأمر مع إضافة scan=true
+    const parentUrl = `${window.location.origin}/parent-portal.html?id=${studentId}`;
+    
+    // إنشاء QR Code
+    const qrContainer = document.createElement('div');
+    qrContainer.style.cssText = 'display:flex;justify-content:center;margin:20px 0;';
+    
+    const qrElement = document.createElement('div');
+    qrElement.id = 'parentQRCode';
+    qrContainer.appendChild(qrElement);
+    
+    // عرض QR Code في Modal
+    showQRModal('📱 كود ولي الأمر', qrContainer, studentName, studentCode);
+    
+    // إنشاء QR Code
+    try {
+        new QRCode(document.getElementById('parentQRCode'), {
+            text: parentUrl,
+            width: 200,
+            height: 200
+        });
+    } catch (error) {
+        console.error('❌ خطأ في إنشاء QR Code:', error);
+        alert('⚠️ حدث خطأ في إنشاء QR Code');
+    }
+}
+
+// ============================================================
+// Show QR Modal
+// ============================================================
+
+function showQRModal(title, content, studentName, studentCode) {
+    let modal = document.getElementById('qrModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'qrModal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    modal.innerHTML = `
+        <div style="
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: scaleIn 0.3s ease;
+            position: relative;
+            direction: rtl;
+        ">
+            <button onclick="closeQRModal()" style="
+                position: absolute;
+                top: 15px;
+                left: 15px;
+                background: #f44336;
+                color: white;
+                border: none;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                font-size: 18px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            ">✕</button>
+            
+            <h2 style="color:#667eea;margin-bottom:10px;">${title}</h2>
+            <p style="color:#888;margin-bottom:5px;">👨‍🎓 ${studentName}</p>
+            <p style="color:#888;margin-bottom:20px;">🔑 الكود: <strong style="color:#667eea;">${studentCode}</strong></p>
+            
+            <div id="qrContent" style="display:flex;justify-content:center;margin:20px 0;">
+                ${content.innerHTML}
+            </div>
+            
+            <div style="background:#f8f9fa;padding:12px;border-radius:12px;text-align:right;font-size:13px;color:#555;">
+                <p style="margin:5px 0;">✅ <strong>المدير:</strong> يمسح → يسجل حضور تلقائي</p>
+                <p style="margin:5px 0;">👨‍👦 <strong>ولي الأمر:</strong> يمسح → يفتح صفحة المتابعة</p>
+            </div>
+            
+            <button onclick="closeQRModal()" style="
+                margin-top:20px;
+                padding:10px 30px;
+                background:#667eea;
+                color:white;
+                border:none;
+                border-radius:12px;
+                font-size:16px;
+                cursor:pointer;
+                transition:all 0.3s ease;
+            ">🔙 إغلاق</button>
+        </div>
+    `;
+    
+    // نقل المحتوى إلى المكان المخصص
+    const qrContent = document.getElementById('qrContent');
+    qrContent.innerHTML = '';
+    qrContent.appendChild(content);
+    
+    modal.style.display = 'flex';
+}
+
+function closeQRModal() {
+    const modal = document.getElementById('qrModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.remove();
+    }
+}
+
+// ============================================================
+// MARK ATTENDANCE BY ID - تسجيل حضور بواسطة ID
+// ============================================================
+
+async function markAttendanceById(studentId) {
+    const student = students.find(s => s.id === studentId);
+    if (!student) {
+        alert("❌ الطالب غير موجود");
+        return false;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const already = attendance.find(a =>
+        a.student_id === student.id &&
+        a.date.startsWith(today)
+    );
+
+    if (already) {
+        const studentName = getStudentField(student, 'name') || 'غير معروف';
+        alert(`⚠️ ${studentName} مسجل حضور بالفعل`);
+        return false;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('attendance')
+            .insert([{
+                student_id: student.id,
+                group_id: student.group_id,
+                status: 'present',
+                date: new Date().toISOString()
+            }]);
+
+        if (error) {
+            console.error(error);
+            alert("❌ فشل تسجيل الحضور");
+            return false;
+        }
+
+        attendance.push({
+            student_id: student.id,
+            group_id: student.group_id,
+            status: 'present',
+            date: new Date().toISOString()
+        });
+
+        const currentStreak = getStudentField(student, 'streak') || 0;
+        const currentPoints = getStudentField(student, 'points') || 0;
+        
+        student.streak = currentStreak + 1;
+        student.points = currentPoints + 5;
+        
+        await supabaseClient
+            .from('students')
+            .update({ 
+                streak: student.streak,
+                points: student.points
+            })
+            .eq('id', student.id);
+        
+        checkMedals(student);
+        saveData();
+        updateDashboard();
+        updateLeaderboard();
+        updateHonorBoard();
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('❌ حدث خطأ في تسجيل الحضور');
+        return false;
+    }
+}
     }
 }
