@@ -461,6 +461,29 @@ function updateCharts() {
 }
 
 // ============================================================
+// QR CODE FUNCTIONS (بدلاً من الباركود)
+// ============================================================
+
+function generateQRCode(elementId, code) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    element.innerHTML = "";
+
+    new QRCode(element, {
+        text: code,        // نخزن كود الطالب فقط
+        width: 80,
+        height: 80
+    });
+}
+
+function generateAllQRCodes() {
+    students.forEach(s => {
+        generateQRCode(`qrcode-${s.id}`, s.code);
+    });
+}
+
+// ============================================================
 // Students Management (مع Supabase)
 // ============================================================
 
@@ -593,7 +616,7 @@ function loadStudents() {
             <td>⭐ ${points}</td>
             <td>🔥 ${streak}</td>
             <td>
-                <canvas id="barcode-${s.id}" width="100" height="100"></canvas>
+                <div id="qrcode-${s.id}"></div>
             </td>
             <td>
                 <button class="btn-primary" onclick="editStudent('${s.id}')" style="padding:4px 10px;font-size:11px;">✏️</button>
@@ -603,7 +626,7 @@ function loadStudents() {
         </tr>`;
     }).join('');
     
-    setTimeout(generateAllBarcodes, 100);
+    setTimeout(generateAllQRCodes, 100);
 }
 
 function viewProfile(studentId) {
@@ -770,7 +793,7 @@ function displayFilteredStudents(filteredStudents) {
             <td>⭐ ${points}</td>
             <td>🔥 ${streak}</td>
             <td>
-                <svg id="barcode-${s.id}" class="barcode-svg"></svg>
+                <div id="qrcode-${s.id}"></div>
             </td>
             <td>
                 <button class="btn-primary" onclick="editStudent('${s.id}')" style="padding:4px 10px;font-size:11px;">✏️</button>
@@ -780,7 +803,7 @@ function displayFilteredStudents(filteredStudents) {
         </tr>`;
     }).join('');
     
-    setTimeout(generateAllBarcodes, 100);
+    setTimeout(generateAllQRCodes, 100);
 }
 
 function clearFilters() {
@@ -960,7 +983,7 @@ function showManualAttendance() {
 function showCameraAttendance() {
     document.getElementById('cameraAttendance').style.display = 'block';
     document.getElementById('manualAttendance').style.display = 'none';
-    setTimeout(() => startCameraReader(), 500);
+    setTimeout(() => startQRScanner(), 500);
 }
 
 async function saveManualAttendance() {
@@ -1039,157 +1062,142 @@ async function saveManualAttendance() {
 }
 
 // ============================================================
-// Camera
+// QR SCANNER (الكاميرا)
 // ============================================================
 
-function startCameraReader() {
+function startQRScanner() {
     const readerElement = document.getElementById('reader');
     const resultElement = document.getElementById('scanResult');
-    if (!readerElement) return;
-    if (isCameraRunning) {
-        if (resultElement) {
-            resultElement.textContent = '📷 الكاميرا تعمل بالفعل';
-            resultElement.style.color = '#4CAF50';
-        }
+    
+    if (!readerElement) {
+        alert('⚠️ عنصر الكاميرا غير موجود');
         return;
     }
+    
+    if (typeof Html5Qrcode === 'undefined') {
+        alert('⚠️ جاري تحميل مكتبة المسح... يرجى الانتظار');
+        return;
+    }
+    
     if (resultElement) {
         resultElement.textContent = '📷 جاري تشغيل الكاميرا...';
         resultElement.style.color = '#667eea';
     }
-    if (typeof Html5Qrcode === 'undefined') {
-        if (resultElement) {
-            resultElement.textContent = '❌ جاري تحميل مكتبة الباركود... يرجى الانتظار';
-            resultElement.style.color = '#f44336';
-        }
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/html5-qrcode';
-        script.onload = function() { startCameraReader(); };
-        document.head.appendChild(script);
-        return;
-    }
-    try {
-        html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanError)
-            .then(() => {
-                isCameraRunning = true;
-                if (resultElement) {
-                    resultElement.textContent = '📷 الكاميرا تعمل... ضع الباركود أمام الكاميرا';
-                    resultElement.style.color = '#4CAF50';
-                }
-            }).catch(err => {
-                if (resultElement) {
-                    resultElement.textContent = '❌ لا يمكن تشغيل الكاميرا: ' + err.message;
-                    resultElement.style.color = '#f44336';
-                }
-            });
-    } catch (error) {
-        if (resultElement) {
-            resultElement.textContent = '❌ حدث خطأ: ' + error.message;
-            resultElement.style.color = '#f44336';
-        }
-    }
-}
-
-async function onScanSuccess(decodedText) {
-    const resultElement = document.getElementById('scanResult');
-    const student = students.find(s => s.code === decodedText);
     
-    if (student) {
-        try {
-            const { data, error } = await supabaseClient
-                .from('attendance')
-                .insert([{
-                    student_id: student.id,
-                    group_id: student.group_id || null,
-                    status: 'present',
-                    method: 'camera'
-                }])
-                .select();
-            
-            if (error) throw error;
-            
-            if (data && data.length > 0) {
-                attendance.unshift(data[0]);
-            } else {
-                const tempRecord = {
-                    id: Date.now().toString(),
-                    student_id: student.id,
-                    group_id: student.group_id || null,
-                    status: 'present',
-                    date: new Date().toISOString(),
-                    method: 'camera'
-                };
-                attendance.unshift(tempRecord);
-            }
-            
-            const { error: updateError } = await supabaseClient
-                .from('students')
-                .update({ 
-                    streak: (student.streak || 0) + 1,
-                    points: (student.points || 0) + 5
-                })
-                .eq('id', student.id);
-            
-            if (!updateError) {
-                student.streak = (student.streak || 0) + 1;
-                student.points = (student.points || 0) + 5;
-                checkMedals(student);
-            }
-            
-            saveData();
-            updateDashboard();
-            updateLeaderboard();
-            updateHonorBoard();
-            
+    const scanner = new Html5Qrcode("reader");
+    
+    scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        async (decodedText) => {
             if (resultElement) {
-                resultElement.innerHTML = `✅ <strong>تم تسجيل حضور: ${student.name}</strong> ⭐ +5 نقاط`;
+                resultElement.textContent = `✅ تم مسح الكود: ${decodedText}`;
                 resultElement.style.color = '#4CAF50';
             }
-            
-            const baseUrl = window.location.origin;
-            window.location.href = `${baseUrl}/student-profile.html?code=${student.code}`;
-            
-            setTimeout(() => stopCameraReader(), 3000);
-            
-        } catch (error) {
-            console.error('❌ Error:', error);
+            await markAttendanceByCode(decodedText);
+            // وقف المسح بعد أول قراءة
+            scanner.stop();
             if (resultElement) {
-                resultElement.textContent = '❌ حدث خطأ في تسجيل الحضور';
-                resultElement.style.color = '#f44336';
-            }
-        }
-    } else {
-        if (resultElement) {
-            resultElement.innerHTML = `❌ <strong>كود غير معروف:</strong> ${decodedText}`;
-            resultElement.style.color = '#f44336';
-        }
-        setTimeout(() => {
-            if (isCameraRunning && resultElement) {
-                resultElement.innerHTML = '📷 الكاميرا تعمل... ضع الباركود أمام الكاميرا';
-                resultElement.style.color = '#4CAF50';
-            }
-        }, 2000);
-    }
-}
-
-function onScanError(error) {}
-
-function stopCameraReader() {
-    if (html5QrCode && isCameraRunning) {
-        html5QrCode.stop().then(() => {
-            isCameraRunning = false;
-            const resultElement = document.getElementById('scanResult');
-            if (resultElement) {
-                resultElement.textContent = '⏹ تم إيقاف الكاميرا';
+                resultElement.textContent = '⏹ تم إيقاف المسح';
                 resultElement.style.color = '#888';
             }
-        }).catch(err => console.error(err));
+        },
+        (errorMessage) => {
+            // تجاهل أخطاء القراءة المؤقتة
+        }
+    ).catch(err => {
+        if (resultElement) {
+            resultElement.textContent = '❌ لا يمكن تشغيل الكاميرا: ' + err.message;
+            resultElement.style.color = '#f44336';
+        }
+        alert('⚠️ لا يمكن تشغيل الكاميرا. تأكد من السماح بالوصول إلى الكاميرا.');
+    });
+}
+
+// ============================================================
+// MARK ATTENDANCE BY QR CODE
+// ============================================================
+
+async function markAttendanceByCode(code) {
+    const student = students.find(s => s.code === code);
+
+    if (!student) {
+        alert("❌ الطالب غير موجود");
+        return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // تحقق هل اتسجل قبل كده النهارده
+    const already = attendance.find(a =>
+        a.student_id === student.id &&
+        a.date.startsWith(today)
+    );
+
+    if (already) {
+        alert(`⚠️ ${student.name} مسجل حضور بالفعل`);
+        return;
+    }
+
+    try {
+        // حفظ في Supabase
+        const { error } = await supabaseClient
+            .from('attendance')
+            .insert([{
+                student_id: student.id,
+                group_id: student.group_id,
+                status: 'present',
+                date: new Date().toISOString()
+            }]);
+
+        if (error) {
+            console.error(error);
+            alert("❌ فشل تسجيل الحضور");
+            return;
+        }
+
+        alert(`✅ تم تسجيل حضور ${student.name}`);
+
+        // تحديث البيانات المحلية
+        attendance.push({
+            student_id: student.id,
+            group_id: student.group_id,
+            status: 'present',
+            date: new Date().toISOString()
+        });
+
+        // تحديث النقاط والسلسلة
+        student.streak = (student.streak || 0) + 1;
+        student.points = (student.points || 0) + 5;
+        
+        // تحديث في Supabase
+        await supabaseClient
+            .from('students')
+            .update({ 
+                streak: student.streak,
+                points: student.points
+            })
+            .eq('id', student.id);
+        
+        checkMedals(student);
+        saveData();
+        updateDashboard();
+        updateLeaderboard();
+        updateHonorBoard();
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('❌ حدث خطأ في تسجيل الحضور');
     }
 }
 
-window.addEventListener('beforeunload', function() { stopCameraReader(); });
+function stopCameraReader() {
+    const resultElement = document.getElementById('scanResult');
+    if (resultElement) {
+        resultElement.textContent = '⏹ تم إيقاف الكاميرا';
+        resultElement.style.color = '#888';
+    }
+}
 
 // ============================================================
 // Gamification
@@ -1501,7 +1509,6 @@ function loadProfileData() {
     document.getElementById('profileGradesCount').textContent = studentGrades.length;
     document.getElementById('profileGradesAvg').textContent = avg + '%';
     
-    generateBarcode('profileBarcode', student.code);
     generateQRCode('profileQRCode', student.code);
     
     loadGrades(student.id);
@@ -1516,7 +1523,7 @@ function loadStudentFromQR() {
         document.getElementById('studentProfileCard').innerHTML = `
             <div style="text-align:center;padding:40px;">
                 <h2>❌ لم يتم العثور على طالب</h2>
-                <p style="color:#888;">يرجى مسح باركود صحيح</p>
+                <p style="color:#888;">يرجى مسح QR Code صحيح</p>
                 <button onclick="window.location.href='index.html'" class="btn-primary" style="margin-top:20px;">🔙 العودة لتسجيل الدخول</button>
             </div>
         `;
@@ -1581,7 +1588,6 @@ function loadStudentFromQR() {
     document.getElementById('spPaidFees').textContent = paidFees;
     document.getElementById('spRemainingFees').textContent = remainingFees;
     
-    generateBarcode('spBarcode', student.code);
     generateQRCode('spQRCode', student.code);
     
     const gradesBody = document.getElementById('spGradesTableBody');
@@ -1788,7 +1794,6 @@ function showCard() {
     const group = groups.find(g => g.id === student.group_id);
     document.getElementById('cardGroup').textContent = group ? group.name : 'غير محدد';
     
-    generateBarcode('cardBarcode', student.code);
     generateQRCode('cardQRCode', student.code);
 }
 
@@ -1815,7 +1820,6 @@ function showAllCards() {
                         <p><strong>⭐ نقاط:</strong> ${points}</p>
                     </div>
                     <div class="card-qr">
-                        <svg id="cardBarcode-${s.id}" class="barcode-svg"></svg>
                         <div id="cardQRCode-${s.id}"></div>
                     </div>
                 </div>
@@ -1826,7 +1830,6 @@ function showAllCards() {
     
     setTimeout(() => {
         students.forEach(s => {
-            generateBarcode(`cardBarcode-${s.id}`, s.code);
             generateQRCode(`cardQRCode-${s.id}`, s.code);
         });
     }, 100);
@@ -1834,104 +1837,6 @@ function showAllCards() {
 
 function printCard() { window.print(); }
 function printSingleCard() { window.print(); }
-
-// ============================================================
-// Barcode
-// ============================================================
-
-function generateBarcode(elementId, code) {
-    try {
-        if (typeof JsBarcode === 'undefined') {
-            console.log('⏳ جاري تحميل مكتبة الباركود...');
-            setTimeout(() => generateBarcode(elementId, code), 500);
-            return;
-        }
-
-        let upcCode = code.padStart(11, '0');
-        let sum = 0;
-
-        for (let i = 0; i < upcCode.length; i++) {
-            if (i % 2 === 0) {
-                sum += parseInt(upcCode[i]) * 3;
-            } else {
-                sum += parseInt(upcCode[i]);
-            }
-        }
-
-        const checkDigit = (10 - (sum % 10)) % 10;
-        upcCode += checkDigit;
-
-        const element = document.getElementById(elementId);
-
-        if (!element) {
-            console.log(`⚠️ Element ${elementId} not found`);
-            return;
-        }
-
-        // If element is canvas, use canvas renderer
-        if (element.tagName === 'CANVAS') {
-            JsBarcode(element, upcCode, {
-                format: "UPC",
-                width: 1.8,
-                height: 60,
-                displayValue: true,
-                fontSize: 16,
-                margin: 5
-            });
-        } else {
-            // For SVG elements
-            JsBarcode(element, upcCode, {
-                format: "UPC",
-                width: 1.8,
-                height: 60,
-                displayValue: true,
-                fontSize: 16,
-                margin: 5
-            });
-        }
-
-    } catch (error) {
-        console.log("❌ خطأ في إنشاء الباركود:", error);
-    }
-}
-
-function generateQRCode(elementId, code) {
-    try {
-        if (typeof QRCode === 'undefined') {
-            console.log('⏳ جاري تحميل مكتبة QR Code...');
-            setTimeout(() => generateQRCode(elementId, code), 500);
-            return;
-        }
-
-        const element = document.getElementById(elementId);
-        if (!element) {
-            console.log(`⚠️ Element ${elementId} not found`);
-            return;
-        }
-
-        element.innerHTML = "";
-        
-        const url = `${window.location.origin}/student-profile.html?code=${code}`;
-        
-        new QRCode(element, {
-            text: url,
-            width: 70,
-            height: 70,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
-    } catch (error) {
-        console.log("❌ خطأ في إنشاء QR Code:", error);
-    }
-}
-
-function generateAllBarcodes() {
-    students.forEach(s => {
-        generateBarcode(`barcode-${s.id}`, s.code);
-        generateQRCode(`qrcode-${s.id}`, s.code);
-    });
-}
 
 // ============================================================
 // PDF
