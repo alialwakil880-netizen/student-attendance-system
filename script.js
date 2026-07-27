@@ -2,6 +2,8 @@
 // بيانات مؤقتة
 // ============================================================
 
+let currentParentURL = "";
+let currentParentCode = "";
 let students = [];
 let groups = [];
 let attendance = [];
