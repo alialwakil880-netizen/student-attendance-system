@@ -261,6 +261,13 @@
             100% { transform: rotate(360deg); }
         }
         
+        /* إخفاء أي أزرار إضافية */
+        .parent-container .bottom-bar,
+        .parent-container .action-buttons,
+        .parent-container .search-section {
+            display: none !important;
+        }
+        
         @media print {
             .parent-back-btn { display: none; }
             .parent-header { background: #667eea !important; -webkit-text-fill-color: white !important; }
