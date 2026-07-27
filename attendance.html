@@ -5,57 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تسجيل الحضور</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
-    <div class="dashboard-container">
-        <div class="sidebar">
-            <h2>📚 النظام</h2>
-            <ul>
-                <li onclick="window.location.href='dashboard.html'">📊 الرئيسية</li>
-                <li class="active" onclick="window.location.href='attendance.html'">✅ تسجيل الحضور</li>
-                <li onclick="window.location.href='students.html'">👨‍🎓 الطلاب</li>
-                <li onclick="window.location.href='groups.html'">📋 المجاميع</li>
-                <li onclick="window.location.href='card.html'">🪪 كارنيهات</li>
-                <li onclick="backupData()">💾 نسخ احتياطي</li>
-                <li onclick="restoreData()">📂 استعادة بيانات</li>
-                <li onclick="toggleDarkMode()">🌙 الوضع الداكن</li>
-                <li onclick="logout()">🚪 تسجيل خروج</li>
-            </ul>
-        </div>
-
-        <div class="main-content">
-            <div class="header">
-                <h1>✅ تسجيل الحضور</h1>
-                <div class="user-info"><span id="userNameDisplay">👤 مدير</span></div>
+    <div class="page-transition">
+        <div class="dashboard-container">
+            <div class="sidebar">
+                <h2>📚 النظام</h2>
+                <ul>
+                    <li onclick="navigateTo('dashboard.html')">📊 الرئيسية</li>
+                    <li class="active" onclick="navigateTo('attendance.html')">✅ تسجيل الحضور</li>
+                    <li onclick="navigateTo('students.html')">👨‍🎓 الطلاب</li>
+                    <li onclick="navigateTo('groups.html')">📋 المجاميع</li>
+                    <li onclick="navigateTo('card.html')">🪪 كارنيهات</li>
+                    <li onclick="backupData()">💾 نسخ احتياطي</li>
+                    <li onclick="restoreData()">📂 استعادة بيانات</li>
+                    <li onclick="toggleDarkMode()">🌙 الوضع الداكن</li>
+                    <li onclick="logout()">🚪 تسجيل خروج</li>
+                </ul>
             </div>
 
-            <div class="attendance-options">
-                <div class="option-card" onclick="showManualAttendance()">
-                    <div class="option-icon">✍️</div>
-                    <h3>تسجيل يدوي</h3>
-                    <p>إدخال الحضور يدوياً</p>
+            <div class="main-content">
+                <div class="header">
+                    <h1>✅ تسجيل الحضور</h1>
+                    <div class="user-info"><span id="userNameDisplay">👤 مدير</span></div>
                 </div>
-                <div class="option-card" onclick="showCameraAttendance()">
-                    <div class="option-icon">📷</div>
-                    <h3>مسح باركود</h3>
-                    <p>استخدم الكاميرا لمسح الكود</p>
+
+                <div class="attendance-options">
+                    <div class="option-card" onclick="showManualAttendance()">
+                        <div class="option-icon">✍️</div>
+                        <h3>تسجيل يدوي</h3>
+                        <p>إدخال الحضور يدوياً</p>
+                    </div>
+                    <div class="option-card" onclick="showCameraAttendance()">
+                        <div class="option-icon">📷</div>
+                        <h3>مسح باركود</h3>
+                        <p>استخدم الكاميرا لمسح الكود</p>
+                    </div>
                 </div>
-            </div>
 
-            <div id="manualAttendance" class="attendance-section" style="display:none;">
-                <h3>✍️ تسجيل الحضور يدوياً</h3>
-                <div class="form-group"><label>اختر الطالب</label><select id="studentSelect"><option value="">-- اختر طالب --</option></select></div>
-                <div class="form-group"><label>الحالة</label><select id="attendanceStatus"><option value="present">✅ حاضر</option><option value="absent">❌ غائب</option></select></div>
-                <button onclick="saveManualAttendance()" class="btn-primary">💾 حفظ</button>
-            </div>
+                <div id="manualAttendance" class="attendance-section" style="display:none;">
+                    <h3>✍️ تسجيل الحضور يدوياً</h3>
+                    <div class="form-group"><label>اختر الطالب</label><select id="studentSelect"><option value="">-- اختر طالب --</option></select></div>
+                    <div class="form-group"><label>الحالة</label><select id="attendanceStatus"><option value="present">✅ حاضر</option><option value="absent">❌ غائب</option></select></div>
+                    <button onclick="saveManualAttendance()" class="btn-primary">💾 حفظ</button>
+                </div>
 
-            <div id="cameraAttendance" class="attendance-section" style="display:none;">
-                <h3>📷 مسح الباركود</h3>
-                <p style="color:#888;margin-bottom:10px;">ضع الباركود أمام الكاميرا للتسجيل التلقائي</p>
-                <div id="reader" style="width:100%;max-width:500px;margin:0 auto;"></div>
-                <div id="scanResult" class="scan-result" style="margin-top:15px;padding:15px;border-radius:10px;background:#f5f7fa;text-align:center;"></div>
-                <button onclick="stopCameraReader()" class="btn-danger" style="margin-top:10px;">⏹ إيقاف الكاميرا</button>
+                <div id="cameraAttendance" class="attendance-section" style="display:none;">
+                    <h3>📷 مسح الباركود</h3>
+                    <p style="color:#888;margin-bottom:10px;">ضع الباركود أمام الكاميرا للتسجيل التلقائي</p>
+                    <div id="reader" style="width:100%;max-width:500px;margin:0 auto;"></div>
+                    <div id="scanResult" class="scan-result"></div>
+                    <button onclick="stopCameraReader()" class="btn-danger" style="margin-top:10px;">⏹ إيقاف الكاميرا</button>
+                </div>
             </div>
         </div>
     </div>
