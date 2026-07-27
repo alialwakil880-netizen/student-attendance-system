@@ -2267,3 +2267,214 @@ function generatePDF() {
     win.focus();
     win.print();
 }
+// ============================================================
+// PARENT PORTAL - بوابة ولي الأمر
+// ============================================================
+
+function openParentPortal(studentId) {
+    const url = `parent-portal.html?id=${studentId}`;
+    window.open(url, '_blank', 'width=1100,height=900,scrollbars=yes,resizable=yes');
+}
+
+function loadParentData() {
+    const container = document.getElementById('parentContent');
+    if (!container) return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('id');
+    
+    console.log('🔍 Parent Portal - Student ID:', studentId);
+    console.log('📊 Students count:', students.length);
+    
+    if (!studentId) {
+        container.innerHTML = `
+            <div class="parent-not-found">
+                <h2>❌ لم يتم العثور على طالب</h2>
+                <p>يرجى استخدام الرابط الصحيح للوصول إلى بيانات الطالب</p>
+                <a href="index.html" class="parent-back-btn">🔙 العودة لتسجيل الدخول</a>
+            </div>
+        `;
+        return;
+    }
+    
+    const student = students.find(s => s.id === studentId);
+    
+    console.log('🎯 Found student:', student);
+    
+    if (!student) {
+        container.innerHTML = `
+            <div class="parent-not-found">
+                <h2>❌ طالب غير موجود</h2>
+                <p>الطالب الذي تبحث عنه غير موجود في النظام</p>
+                <p style="font-size:14px;color:#667eea;margin-top:10px;">🔑 المعرف: ${studentId}</p>
+                <a href="index.html" class="parent-back-btn">🔙 العودة لتسجيل الدخول</a>
+            </div>
+        `;
+        return;
+    }
+    
+    const studentName = getStudentField(student, 'name') || 'غير معروف';
+    const studentCode = getStudentField(student, 'code') || '---';
+    const studentPhone = getStudentField(student, 'phone') || 'غير مسجل';
+    const studentFees = getStudentField(student, 'fees') || 0;
+    const studentFeesPaid = getStudentField(student, 'fees_paid') || 0;
+    const studentPoints = getStudentField(student, 'points') || 0;
+    const studentStreak = getStudentField(student, 'streak') || 0;
+    const studentIsStar = student.is_star || false;
+    
+    const group = groups.find(g => g.id === student.group_id);
+    const groupName = group ? group.name : 'غير محدد';
+    
+    const level = getLevelLabel(getStudentLevel(student.id));
+    const levelClass = getLevelClass(getStudentLevel(student.id));
+    const rank = getStudentRank(student.id);
+    const medals = getMedals(student);
+    const remainingFees = studentFees - studentFeesPaid;
+    
+    const studentAttendance = attendance.filter(a => a.student_id === student.id);
+    const present = studentAttendance.filter(a => a.status === 'present').length;
+    const absent = studentAttendance.filter(a => a.status === 'absent').length;
+    const totalAttendance = present + absent;
+    const attendanceRate = totalAttendance > 0 ? Math.round((present / totalAttendance) * 100) : 0;
+    
+    const studentGrades = grades.filter(g => g.student_id === student.id);
+    const gradesAvg = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
+    
+    const feesHistory = student.feesHistory || [];
+    
+    container.innerHTML = `
+        <div class="parent-card">
+            <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px;">
+                <div style="font-size:80px;background:#f8f9fa;border-radius:50%;width:100px;height:100px;display:flex;align-items:center;justify-content:center;border:3px solid #667eea;">
+                    ${getAvatar(student.id)}
+                </div>
+                <div style="flex:1;">
+                    <h2 style="font-size:28px;color:#1a1a2e;margin:0;">${studentName}</h2>
+                    <p style="color:#888;margin:5px 0;">🔑 الكود: <strong style="color:#667eea;font-size:20px;">${studentCode}</strong></p>
+                    <p style="color:#888;margin:5px 0;">📋 المجموعة: <strong>${groupName}</strong></p>
+                    ${studentIsStar ? '<span style="display:inline-block;background:#fbbf24;padding:4px 16px;border-radius:30px;font-weight:700;color:#000;font-size:14px;">⭐ طالب مميز</span>' : ''}
+                </div>
+                <div class="parent-qr-code">
+                    <div id="parentQRCode"></div>
+                </div>
+            </div>
+            
+            <div class="parent-info-grid">
+                <div class="parent-info-item">
+                    <span class="label">📱 ولي الأمر</span>
+                    <span class="value">${studentPhone}</span>
+                </div>
+                <div class="parent-info-item">
+                    <span class="label">🏆 المستوى</span>
+                    <span class="value"><span class="parent-level-badge parent-level-${levelClass.replace('level-', '')}">${level}</span></span>
+                </div>
+                <div class="parent-info-item">
+                    <span class="label">⭐ النقاط</span>
+                    <span class="value">${studentPoints} نقطة</span>
+                </div>
+                <div class="parent-info-item">
+                    <span class="label">🥇 الترتيب</span>
+                    <span class="value">#${rank}</span>
+                </div>
+                <div class="parent-info-item">
+                    <span class="label">🔥 سلسلة الحضور</span>
+                    <span class="value">${studentStreak} يوم</span>
+                </div>
+                <div class="parent-info-item">
+                    <span class="label">🏅 الميداليات</span>
+                    <span class="value"><span class="parent-medals">${medals.length > 0 ? medals.join(' ') : 'لا توجد'}</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="parent-card">
+            <h2>📊 إحصائيات الطالب</h2>
+            <div class="parent-stats">
+                <div class="parent-stat">
+                    <div class="num green">${present}</div>
+                    <div class="lbl">✅ حضور</div>
+                </div>
+                <div class="parent-stat">
+                    <div class="num red">${absent}</div>
+                    <div class="lbl">❌ غياب</div>
+                </div>
+                <div class="parent-stat">
+                    <div class="num blue">${attendanceRate}%</div>
+                    <div class="lbl">📊 نسبة الحضور</div>
+                </div>
+                <div class="parent-stat">
+                    <div class="num purple">${gradesAvg}</div>
+                    <div class="lbl">📝 متوسط الدرجات</div>
+                </div>
+                <div class="parent-stat">
+                    <div class="num gold">${studentFees} ج</div>
+                    <div class="lbl">💰 إجمالي المصاريف</div>
+                </div>
+                <div class="parent-stat">
+                    <div class="num green">${studentFeesPaid} ج</div>
+                    <div class="lbl">💳 المدفوع</div>
+                </div>
+                <div class="parent-stat">
+                    <div class="num red">${remainingFees} ج</div>
+                    <div class="lbl">📦 المتبقي</div>
+                </div>
+                <div class="parent-stat">
+                    <div class="num purple">${studentGrades.length}</div>
+                    <div class="lbl">📝 عدد الدرجات</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="parent-card">
+            <h2>📝 سجل الدرجات</h2>
+            ${studentGrades.length > 0 ? `
+            <table class="parent-table">
+                <thead>
+                    <tr><th>المادة</th><th>الدرجة</th><th>التاريخ</th></tr>
+                </thead>
+                <tbody>
+                    ${studentGrades.map(g => `
+                        <tr>
+                            <td>${g.subject}</td>
+                            <td><strong style="color:#667eea;">${g.value}</strong></td>
+                            <td>${new Date(g.date).toLocaleDateString('ar-EG')}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            ` : '<p style="color:#888;text-align:center;padding:20px;">📭 لا توجد درجات مسجلة</p>'}
+        </div>
+        
+        <div class="parent-card">
+            <h2>💰 سجل المصاريف</h2>
+            ${feesHistory.length > 0 ? `
+            <table class="parent-table">
+                <thead>
+                    <tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th></tr>
+                </thead>
+                <tbody>
+                    ${feesHistory.map(f => `
+                        <tr>
+                            <td>${new Date(f.date).toLocaleDateString('ar-EG')}</td>
+                            <td><strong style="color:#4CAF50;">${f.amount} ج</strong></td>
+                            <td>${f.note || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            ` : '<p style="color:#888;text-align:center;padding:20px;">📭 لا توجد مدفوعات مسجلة</p>'}
+            
+            <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:15px;padding:15px;background:#f8f9fa;border-radius:12px;">
+                <div><strong>الإجمالي:</strong> <span style="color:#667eea;font-weight:700;">${studentFees} ج</span></div>
+                <div><strong>المدفوع:</strong> <span style="color:#4CAF50;font-weight:700;">${studentFeesPaid} ج</span></div>
+                <div><strong>المتبقي:</strong> <span style="color:#f44336;font-weight:700;">${remainingFees} ج</span></div>
+            </div>
+        </div>
+        
+        <div class="parent-warning">
+            <p>🔒 هذه الصفحة للعرض فقط - لا توجد صلاحيات تعديل</p>
+        </div>
+    `;
+    
+    generateQRCode('parentQRCode', studentCode);
+}
