@@ -2838,7 +2838,8 @@ function generateParentQRCode(studentId) {
     const studentCode = getStudentField(student, 'code') || '---';
     
     const parentUrl = `${window.location.origin}/parent-portal.html?id=${studentId}`;
-    
+    window.currentParentQRUrl = parentUrl;
+window.currentParentStudentCode = studentCode;
     const qrContainer = document.createElement('div');
     qrContainer.style.cssText = 'display:flex;justify-content:center;margin:20px 0;';
     
