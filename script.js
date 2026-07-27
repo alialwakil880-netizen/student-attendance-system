@@ -3031,3 +3031,47 @@ async function markAttendanceById(studentId) {
         return false;
     }
 }
+function downloadQRCodeCard() {
+
+    const qrCanvas = document.querySelector("#profileQRCode canvas");
+
+    if (!qrCanvas) {
+        alert("QR غير موجود");
+        return;
+    }
+
+    const code = document.getElementById("profileCode").textContent.trim();
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 450;
+    canvas.height = 520;
+
+    const ctx = canvas.getContext("2d");
+
+    // خلفية
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // إطار
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10,10,430,500);
+
+    // رسم الـ QR
+    ctx.drawImage(qrCanvas, 75, 40, 300, 300);
+
+    // رقم الطالب
+    ctx.fillStyle = "#000";
+    ctx.font = "bold 42px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(code, canvas.width / 2, 400);
+
+    // اسم الأكاديمية
+    ctx.font = "26px Arial";
+    ctx.fillText("أكاديمية النجاح", canvas.width / 2, 455);
+
+    const link = document.createElement("a");
+    link.download = `QR-${code}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+}
