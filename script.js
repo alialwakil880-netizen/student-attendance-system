@@ -146,6 +146,10 @@ function logout() {
 
 async function loadData() {
     try {
+        if (!supabaseClient) {
+            await initSupabaseClient();
+        }
+        
         // جلب الطلاب من Supabase
         const { data: studentsData, error: studentsError } = await supabaseClient
             .from('students')
@@ -514,8 +518,7 @@ async function saveStudent() {
     
     try {
         console.log('📤 جاري حفظ الطالب في Supabase:', student);
-        console.log("Supabase Client =", supabaseClient);
-console.log("Student =", student);
+        
         const { data, error } = await supabaseClient
             .from('students')
             .insert([student])
@@ -1436,25 +1439,38 @@ function restoreData() {
 // ============================================================
 
 function loadProfileData() {
-    const studentId = localStorage.getItem('viewStudentId');
-    if (!studentId) { window.location.href = 'students.html'; return; }
-    const student = students.find(s => s.id === studentId);
-    if (!student) { alert('⚠️ الطالب غير موجود'); window.location.href = 'students.html'; return; }
-    
-    currentStudentId = studentId;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+
+    let student;
+
+    if (code) {
+        student = students.find(s => s.code === code);
+    } else {
+        const studentId = localStorage.getItem("viewStudentId");
+        student = students.find(s => s.id === studentId);
+    }
+
+    if (!student) {
+        alert("⚠️ الطالب غير موجود");
+        window.location.href = "students.html";
+        return;
+    }
+
+    currentStudentId = student.id;
     const group = groups.find(g => g.id === student.group_id);
-    
+
     document.getElementById('profileName').textContent = student.name;
     document.getElementById('profilePhone').textContent = student.phone || 'غير محدد';
     document.getElementById('profileGroup').textContent = group ? group.name : 'غير محدد';
     document.getElementById('profileCode').textContent = student.code || 'غير محدد';
-    document.getElementById('profileAvatar').textContent = getAvatar(studentId);
+    document.getElementById('profileAvatar').textContent = getAvatar(student.id);
     
     const totalFees = student.fees || 0;
     document.getElementById('profileFees').textContent = totalFees;
     
     const points = student.points || 0;
-    const rank = getStudentRank(studentId);
+    const rank = getStudentRank(student.id);
     const streak = student.streak || 0;
     const medals = getMedals(student);
     
@@ -1464,15 +1480,15 @@ function loadProfileData() {
     document.getElementById('profileMedals').textContent = medals.join(' ');
     
     document.getElementById('studentPoints').textContent = points;
-    document.getElementById('studentLevel').textContent = getLevelLabel(getStudentLevel(studentId));
+    document.getElementById('studentLevel').textContent = getLevelLabel(getStudentLevel(student.id));
     document.getElementById('studentMedals').textContent = medals.join(' ');
     
-    const studentGrades = grades.filter(g => g.student_id === studentId);
+    const studentGrades = grades.filter(g => g.student_id === student.id);
     const avg = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length) : 0;
     document.getElementById('profileAvgGrade').textContent = avg + '%';
     document.getElementById('profileGradeRank').textContent = rank;
     
-    const studentAttendance = attendance.filter(a => a.student_id === studentId);
+    const studentAttendance = attendance.filter(a => a.student_id === student.id);
     const present = studentAttendance.filter(a => a.status === 'present').length;
     const absent = studentAttendance.filter(a => a.status === 'absent').length;
     const total = present + absent;
@@ -1486,9 +1502,10 @@ function loadProfileData() {
     document.getElementById('profileGradesAvg').textContent = avg + '%';
     
     generateBarcode('profileBarcode', student.code);
+    generateQRCode('profileQRCode', student.code);
     
-    loadGrades(studentId);
-    loadFeesHistory(studentId);
+    loadGrades(student.id);
+    loadFeesHistory(student.id);
 }
 
 function loadStudentFromQR() {
@@ -1565,6 +1582,7 @@ function loadStudentFromQR() {
     document.getElementById('spRemainingFees').textContent = remainingFees;
     
     generateBarcode('spBarcode', student.code);
+    generateQRCode('spQRCode', student.code);
     
     const gradesBody = document.getElementById('spGradesTableBody');
     if (gradesBody) {
@@ -1770,7 +1788,9 @@ function showCard() {
     const group = groups.find(g => g.id === student.group_id);
     document.getElementById('cardGroup').textContent = group ? group.name : 'غير محدد';
     
-generateQRCode('cardQRCode', student.code);}
+    generateBarcode('cardBarcode', student.code);
+    generateQRCode('cardQRCode', student.code);
+}
 
 function showAllCards() {
     const container = document.getElementById('allCardsContainer');
@@ -1796,6 +1816,7 @@ function showAllCards() {
                     </div>
                     <div class="card-qr">
                         <svg id="cardBarcode-${s.id}" class="barcode-svg"></svg>
+                        <div id="cardQRCode-${s.id}"></div>
                     </div>
                 </div>
                 <div class="card-footer"><p>✍️ توقيع المدير: _________________</p></div>
@@ -1806,6 +1827,7 @@ function showAllCards() {
     setTimeout(() => {
         students.forEach(s => {
             generateBarcode(`cardBarcode-${s.id}`, s.code);
+            generateQRCode(`cardQRCode-${s.id}`, s.code);
         });
     }, 100);
 }
@@ -1839,18 +1861,34 @@ function generateBarcode(elementId, code) {
         const checkDigit = (10 - (sum % 10)) % 10;
         upcCode += checkDigit;
 
-        const svg = document.getElementById(elementId);
+        const element = document.getElementById(elementId);
 
-        if (!svg) return;
+        if (!element) {
+            console.log(`⚠️ Element ${elementId} not found`);
+            return;
+        }
 
-        JsBarcode(svg, upcCode, {
-            format: "UPC",
-            width: 1.8,
-            height: 60,
-            displayValue: true,
-            fontSize: 16,
-            margin: 5
-        });
+        // If element is canvas, use canvas renderer
+        if (element.tagName === 'CANVAS') {
+            JsBarcode(element, upcCode, {
+                format: "UPC",
+                width: 1.8,
+                height: 60,
+                displayValue: true,
+                fontSize: 16,
+                margin: 5
+            });
+        } else {
+            // For SVG elements
+            JsBarcode(element, upcCode, {
+                format: "UPC",
+                width: 1.8,
+                height: 60,
+                displayValue: true,
+                fontSize: 16,
+                margin: 5
+            });
+        }
 
     } catch (error) {
         console.log("❌ خطأ في إنشاء الباركود:", error);
@@ -1858,34 +1896,43 @@ function generateBarcode(elementId, code) {
 }
 
 function generateQRCode(elementId, code) {
+    try {
+        if (typeof QRCode === 'undefined') {
+            console.log('⏳ جاري تحميل مكتبة QR Code...');
+            setTimeout(() => generateQRCode(elementId, code), 500);
+            return;
+        }
 
-    const element = document.getElementById(elementId);
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.log(`⚠️ Element ${elementId} not found`);
+            return;
+        }
 
-    if (!element) return;
-
-    element.innerHTML = "";
-
-    const url = `${window.location.origin}/profile.html?code=${code}`;
-
-    new QRCode(element, {
-        text: url,
-        width: 70,
-        height: 70
-    });
-
+        element.innerHTML = "";
+        
+        const url = `${window.location.origin}/student-profile.html?code=${code}`;
+        
+        new QRCode(element, {
+            text: url,
+            width: 70,
+            height: 70,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    } catch (error) {
+        console.log("❌ خطأ في إنشاء QR Code:", error);
+    }
 }
 
 function generateAllBarcodes() {
-
     students.forEach(s => {
-
         generateBarcode(`barcode-${s.id}`, s.code);
-
         generateQRCode(`qrcode-${s.id}`, s.code);
-
     });
-
 }
+
 // ============================================================
 // PDF
 // ============================================================
