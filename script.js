@@ -3078,10 +3078,6 @@ function downloadQRCodeCard() {
     ctx.textAlign = "center";
     ctx.fillText(code, canvas.width / 2, 400);
 
-    // اسم الأكاديمية
-    ctx.font = "26px Arial";
-    ctx.fillText("أكاديمية النجاح", canvas.width / 2, 455);
-
     const link = document.createElement("a");
     link.download = `QR-${code}.png`;
     link.href = canvas.toDataURL("image/png");
@@ -3100,5 +3096,30 @@ function downloadParentQR() {
     const link = document.createElement("a");
     link.download = studentCode + ".png";
     link.href = qr.toDataURL("image/png");
+    link.click();
+}
+function downloadParentQR() {
+
+    const canvas = document.querySelector("#parentQRCode canvas");
+    const img = document.querySelector("#parentQRCode img");
+
+    let src = "";
+
+    if (canvas) {
+        src = canvas.toDataURL("image/png");
+    } else if (img) {
+        src = img.src;
+    } else {
+        alert("لم يتم العثور على QR");
+        return;
+    }
+
+    const code = document.getElementById("parentCode")
+        ? document.getElementById("parentCode").textContent
+        : "QR";
+
+    const link = document.createElement("a");
+    link.href = src;
+    link.download = code + ".png";
     link.click();
 }
