@@ -767,7 +767,7 @@ function displayFilteredStudents(filteredStudents) {
             <td>⭐ ${points}</td>
             <td>🔥 ${streak}</td>
             <td>
-                <svg id="barcode-${s.id}" class="barcode-svg"></svg>
+    <svg id="barcode-${s.id}" class="barcode-svg"></svg>
             </td>
             <td>
                 <button class="btn-primary" onclick="editStudent('${s.id}')" style="padding:4px 10px;font-size:11px;">✏️</button>
