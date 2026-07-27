@@ -162,38 +162,20 @@
         
         .parent-footer {
             text-align: center;
-            padding: 30px;
+            padding: 20px;
             color: #888;
             font-size: 14px;
             border-top: 1px solid #f0f0f0;
             margin-top: 20px;
         }
         
-        .parent-footer a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
+        .parent-footer p {
+            margin: 5px 0;
         }
         
-        .parent-footer a:hover {
-            text-decoration: underline;
-        }
-        
+        /* ❌ إخفاء زر العودة لتسجيل الدخول */
         .parent-back-btn {
-            display: inline-block;
-            padding: 10px 30px;
-            background: #667eea;
-            color: white;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 700;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-        
-        .parent-back-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            display: none !important;
         }
         
         .parent-qr-code {
@@ -303,7 +285,7 @@
         }
         
         @media print {
-            .parent-back-btn { display: none; }
+            .parent-back-btn { display: none !important; }
             .parent-header { background: #667eea !important; -webkit-text-fill-color: white !important; }
             .parent-card { box-shadow: none !important; border: 1px solid #ddd !important; }
         }
@@ -333,8 +315,7 @@
 
             <div class="parent-footer">
                 <p>© 2024 نظام متابعة الطلاب - بوابة ولي الأمر</p>
-                <p style="font-size:12px;margin-top:5px;">هذه الصفحة للعرض فقط، لا توجد صلاحيات تعديل</p>
-                <a href="index.html" class="parent-back-btn">🔙 العودة لتسجيل الدخول</a>
+                <p style="font-size:12px;">هذه الصفحة للعرض فقط، لا توجد صلاحيات تعديل</p>
             </div>
         </div>
     </div>
