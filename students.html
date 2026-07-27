@@ -6,9 +6,7 @@
     <title>إدارة الطلاب</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 </head>
 <body>
     <div class="page-transition">
@@ -82,7 +80,7 @@
                 <div class="table-section">
                     <h3>📋 قائمة الطلاب</h3>
                     <table id="studentsTable">
-                        <thead><tr><th>#</th><th>الطالب</th><th>الكود</th><th>المجموعة</th><th>المستوى</th><th>⭐ نقاط</th><th>🔥 سلسلة</th><th>الباركود (UPC)</th><th>الإجراءات</th></tr></thead>
+                        <thead><tr><th>#</th><th>الطالب</th><th>الكود</th><th>المجموعة</th><th>المستوى</th><th>⭐ نقاط</th><th>🔥 سلسلة</th><th>QR Code</th><th>الإجراءات</th></tr></thead>
                         <tbody id="studentsTableBody"><tr><td colspan="9" style="text-align:center;color:#888;">لا يوجد طلاب</td></tr></tbody>
                     </table>
                 </div>
