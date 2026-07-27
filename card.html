@@ -5,58 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>كارنيهات الطلاب</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
-    <div class="dashboard-container">
-        <div class="sidebar">
-            <h2>📚 النظام</h2>
-            <ul>
-                <li onclick="window.location.href='dashboard.html'">📊 الرئيسية</li>
-                <li onclick="window.location.href='attendance.html'">✅ تسجيل الحضور</li>
-                <li onclick="window.location.href='students.html'">👨‍🎓 الطلاب</li>
-                <li onclick="window.location.href='groups.html'">📋 المجاميع</li>
-                <li class="active" onclick="window.location.href='card.html'">🪪 كارنيهات</li>
-                <li onclick="backupData()">💾 نسخ احتياطي</li>
-                <li onclick="restoreData()">📂 استعادة بيانات</li>
-                <li onclick="toggleDarkMode()">🌙 الوضع الداكن</li>
-                <li onclick="logout()">🚪 تسجيل خروج</li>
-            </ul>
-        </div>
-
-        <div class="main-content">
-            <div class="header">
-                <h1>🪪 كارنيهات الطلاب</h1>
-                <button onclick="printCard()" class="btn-primary" style="background:#27ae60;">🖨️ طباعة الكل</button>
+    <div class="page-transition">
+        <div class="dashboard-container">
+            <div class="sidebar">
+                <h2>📚 النظام</h2>
+                <ul>
+                    <li onclick="navigateTo('dashboard.html')">📊 الرئيسية</li>
+                    <li onclick="navigateTo('attendance.html')">✅ تسجيل الحضور</li>
+                    <li onclick="navigateTo('students.html')">👨‍🎓 الطلاب</li>
+                    <li onclick="navigateTo('groups.html')">📋 المجاميع</li>
+                    <li class="active" onclick="navigateTo('card.html')">🪪 كارنيهات</li>
+                    <li onclick="backupData()">💾 نسخ احتياطي</li>
+                    <li onclick="restoreData()">📂 استعادة بيانات</li>
+                    <li onclick="toggleDarkMode()">🌙 الوضع الداكن</li>
+                    <li onclick="logout()">🚪 تسجيل خروج</li>
+                </ul>
             </div>
 
-            <div class="form-section" style="margin-bottom:20px;">
-                <div class="form-group">
-                    <label>اختر طالب لعرض الكارنيه</label>
-                    <select id="cardStudentSelect" onchange="showCard()"><option value="">-- اختر طالب --</option></select>
+            <div class="main-content">
+                <div class="header">
+                    <h1>🪪 كارنيهات الطلاب</h1>
+                    <button onclick="printCard()" class="btn-primary" style="background:#27ae60;">🖨️ طباعة الكل</button>
                 </div>
-            </div>
 
-            <div id="cardContainer" class="card-container" style="display:none;">
-                <div class="student-card" id="studentCard">
-                    <div class="card-header"><h2>📚 أكاديمية النجاح</h2><p>بطاقة تعريف طالب</p></div>
-                    <div class="card-body">
-                        <div class="card-photo"><div class="card-avatar">👨‍🎓</div></div>
-                        <div class="card-info">
-                            <p><strong>الاسم:</strong> <span id="cardName"></span></p>
-                            <p><strong>الكود:</strong> <span id="cardCode"></span></p>
-                            <p><strong>المجموعة:</strong> <span id="cardGroup"></span></p>
-                            <p><strong>تاريخ الإصدار:</strong> <span id="cardDate"></span></p>
-                        </div>
-                        <div class="card-qr"><img id="cardQr" src="" alt="QR"></div>
+                <div class="form-section" style="margin-bottom:20px;">
+                    <div class="form-group">
+                        <label>اختر طالب لعرض الكارنيه</label>
+                        <select id="cardStudentSelect" onchange="showCard()"><option value="">-- اختر طالب --</option></select>
                     </div>
-                    <div class="card-footer"><p>✍️ توقيع المدير: _________________</p></div>
                 </div>
-                <button onclick="printSingleCard()" class="btn-primary" style="margin-top:20px;">🖨️ طباعة هذا الكارنيه</button>
-            </div>
 
-            <div class="table-section">
-                <h3>📋 قائمة الكارنيهات</h3>
-                <div id="allCardsContainer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;"></div>
+                <div id="cardContainer" class="card-container" style="display:none;">
+                    <div class="student-card" id="studentCard">
+                        <div class="card-header"><h2>📚 أكاديمية النجاح</h2><p>بطاقة تعريف طالب</p></div>
+                        <div class="card-body">
+                            <div class="card-photo"><div class="card-avatar" id="cardAvatar">👨‍🎓</div></div>
+                            <div class="card-info">
+                                <p><strong>الاسم:</strong> <span id="cardName"></span></p>
+                                <p><strong>الكود:</strong> <span id="cardCode"></span></p>
+                                <p><strong>المجموعة:</strong> <span id="cardGroup"></span></p>
+                                <p><strong>⭐ نقاط:</strong> <span id="cardPoints">0</span></p>
+                            </div>
+                            <div class="card-qr">
+                                <svg id="cardBarcode" class="barcode-svg"></svg>
+                            </div>
+                        </div>
+                        <div class="card-footer"><p>✍️ توقيع المدير: _________________</p></div>
+                    </div>
+                    <button onclick="printSingleCard()" class="btn-primary" style="margin-top:20px;">🖨️ طباعة هذا الكارنيه</button>
+                </div>
+
+                <div class="table-section">
+                    <h3>📋 قائمة الكارنيهات</h3>
+                    <div id="allCardsContainer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;"></div>
+                </div>
             </div>
         </div>
     </div>
