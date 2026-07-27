@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بروفايل الطالب</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="page-transition">
+        <div class="dashboard-container" style="justify-content:center;align-items:center;min-height:100vh;">
+            <div class="main-content" style="margin:0;max-width:800px;width:100%;padding:20px;">
+                <div class="header" style="margin-top:20px;">
+                    <h1>👤 بروفايل الطالب</h1>
+                    <button onclick="window.location.href='index.html'" class="btn-secondary">🔙 تسجيل دخول</button>
+                </div>
+
+                <div class="profile-card" id="studentProfileCard">
+                    <div class="profile-header">
+                        <div class="profile-avatar" id="spAvatar" style="font-size:80px;width:100px;height:100px;display:flex;align-items:center;justify-content:center;background:#f5f7fa;border-radius:50%;border:3px solid #667eea;">👨‍🎓</div>
+                        <div class="profile-info">
+                            <h2 id="spName" style="font-size:28px;color:#1a1a2e;">اسم الطالب</h2>
+                            <p>📱 <span id="spPhone">رقم الهاتف</span></p>
+                            <p>📋 <span id="spGroup">المجموعة</span></p>
+                            <p>🔑 <strong>الكود: <span id="spCode" style="color:#667eea;font-size:28px;"></span></strong></p>
+                            <p>💰 المصاريف: <span id="spFees">0</span> ج</p>
+                            
+                            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+                                <span class="badge gold">⭐ نقاط: <span id="spPoints">0</span></span>
+                                <span class="badge silver">🥇 الترتيب: #<span id="spRank">-</span></span>
+                                <span class="badge bronze">🔥 سلسلة: <span id="spStreak">0</span> يوم</span>
+                                <span id="spMedals" style="font-size:22px;"></span>
+                            </div>
+                            
+                            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px;">
+                                <button onclick="window.location.href='attendance.html'" class="btn-primary" style="width:auto;padding:8px 16px;">✅ تسجيل حضور</button>
+                                <button onclick="window.location.href='students.html'" class="btn-primary" style="width:auto;padding:8px 16px;background:#667eea;">📋 إدارة الطلاب</button>
+                                <button onclick="window.location.href='dashboard.html'" class="btn-primary" style="width:auto;padding:8px 16px;background:#4CAF50;">📊 لوحة التحكم</button>
+                            </div>
+                        </div>
+                        <div class="profile-qr">
+                            <svg id="spBarcode" class="barcode-svg"></svg>
+                            <p style="font-size:12px;color:#888;margin-top:5px;">باركود الطالب (UPC)</p>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin-bottom:20px;">
+                        <div style="background:#e8f5e9;padding:12px;border-radius:12px;text-align:center;">
+                            <div style="font-size:24px;font-weight:800;color:#4CAF50;" id="spPresentCount">0</div>
+                            <div style="font-size:12px;color:#888;">✅ حضور</div>
+                        </div>
+                        <div style="background:#ffebee;padding:12px;border-radius:12px;text-align:center;">
+                            <div style="font-size:24px;font-weight:800;color:#f44336;" id="spAbsentCount">0</div>
+                            <div style="font-size:12px;color:#888;">❌ غياب</div>
+                        </div>
+                        <div style="background:#e3f2fd;padding:12px;border-radius:12px;text-align:center;">
+                            <div style="font-size:24px;font-weight:800;color:#42a5f5;" id="spAttendanceRate">0%</div>
+                            <div style="font-size:12px;color:#888;">📊 نسبة الحضور</div>
+                        </div>
+                    </div>
+
+                    <div class="student-level-section" style="background:#f5f7fa;padding:16px;border-radius:12px;margin-bottom:16px;">
+                        <h3>🏆 مستوى الطالب</h3>
+                        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
+                            <div>
+                                <p><strong>المستوى:</strong> <span id="spLevel" style="font-size:22px;font-weight:800;color:#667eea;">جيد</span></p>
+                                <p><strong>⭐ النقاط:</strong> <span id="spStudentPoints" style="font-size:22px;font-weight:800;color:#4CAF50;">0</span></p>
+                                <p><strong>🏅 الميداليات:</strong> <span id="spStudentMedals" style="font-size:20px;"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grades-section" style="background:#f5f7fa;padding:16px;border-radius:12px;margin-bottom:16px;">
+                        <h3>📝 الدرجات</h3>
+                        <div style="display:flex;gap:15px;flex-wrap:wrap;margin-bottom:12px;">
+                            <div style="background:white;padding:10px 20px;border-radius:12px;border:1px solid #eee;">
+                                <strong>📊 المتوسط:</strong> <span id="spAvgGrade" style="color:#667eea;font-size:22px;font-weight:800;">0%</span>
+                            </div>
+                            <div style="background:white;padding:10px 20px;border-radius:12px;border:1px solid #eee;">
+                                <strong>🏆 الترتيب:</strong> #<span id="spGradeRank" style="color:#667eea;font-size:22px;font-weight:800;">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grades-table" style="margin-bottom:16px;">
+                        <h3>📊 سجل الدرجات</h3>
+                        <table id="spGradesTable" style="width:100%;border-collapse:collapse;">
+                            <thead>
+                                <tr style="background:#f5f7fa;">
+                                    <th style="padding:10px;text-align:right;">المادة</th>
+                                    <th style="padding:10px;text-align:right;">الدرجة</th>
+                                    <th style="padding:10px;text-align:right;">التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="spGradesTableBody">
+                                <tr><td colspan="3" style="text-align:center;color:#888;padding:20px;">لا توجد درجات</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="fees-section" style="background:#f5f7fa;padding:16px;border-radius:12px;margin-bottom:16px;">
+                        <h3>💰 المصاريف</h3>
+                        <div style="display:flex;gap:15px;flex-wrap:wrap;">
+                            <div style="background:white;padding:10px 20px;border-radius:12px;border:1px solid #eee;">
+                                <strong>الإجمالي:</strong> <span id="spTotalFees" style="color:#667eea;font-size:20px;">0</span> ج
+                            </div>
+                            <div style="background:white;padding:10px 20px;border-radius:12px;border:1px solid #eee;">
+                                <strong>المدفوع:</strong> <span id="spPaidFees" style="color:#4CAF50;font-size:20px;">0</span> ج
+                            </div>
+                            <div style="background:white;padding:10px 20px;border-radius:12px;border:1px solid #eee;">
+                                <strong>المتبقي:</strong> <span id="spRemainingFees" style="color:#f44336;font-size:20px;">0</span> ج
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fees-table">
+                        <h3>📋 سجل المصاريف</h3>
+                        <table id="spFeesTable" style="width:100%;border-collapse:collapse;">
+                            <thead>
+                                <tr style="background:#f5f7fa;">
+                                    <th style="padding:10px;text-align:right;">التاريخ</th>
+                                    <th style="padding:10px;text-align:right;">المبلغ</th>
+                                    <th style="padding:10px;text-align:right;">الملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="spFeesTableBody">
+                                <tr><td colspan="3" style="text-align:center;color:#888;padding:20px;">لا توجد مدفوعات</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="text-align:center;margin-top:20px;padding:16px;background:#f5f7fa;border-radius:12px;">
+                        <p style="color:#888;">📱 تم فتح هذه الصفحة عبر مسح الباركود</p>
+                        <p style="color:#888;font-size:12px;">يمكنك الآن تسجيل الحضور أو العودة للوحة التحكم</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
