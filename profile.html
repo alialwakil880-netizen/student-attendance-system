@@ -131,10 +131,19 @@
                                 <button onclick="generateParentQRCode(currentStudentId)" class="btn-primary" style="width:auto;padding:6px 12px;font-size:12px;background:#fbbf24;color:#000;">📱 كود ولي الأمر</button>
                             </div>
                         </div>
-                        <div class="profile-qr">
-                            <div id="profileQRCode"></div>
-                            <p style="font-size:12px;color:#888;margin-top:5px;">امسح الباركود</p>
-                        </div>
+                       <div class="profile-qr">
+    <div id="profileQRCode"></div>
+
+    <p style="font-size:12px;color:#888;margin-top:5px;">
+        امسح الباركود
+    </p>
+
+    <button onclick="downloadQRCodeCard()"
+            class="btn-primary"
+            style="margin-top:10px;width:100%;">
+        ⬇️ تحميل QR
+    </button>
+</div>
                     </div>
 
                     <div class="student-level-section">
