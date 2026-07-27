@@ -261,11 +261,45 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* إخفاء أي أزرار إضافية */
+        /* ============================================
+           إخفاء كل الأزرار والعناصر الإضافية
+           ============================================ */
+        
+        .parent-container .sidebar,
+        .parent-container .header,
+        .parent-container .dashboard-container,
+        .parent-container .main-content,
         .parent-container .bottom-bar,
         .parent-container .action-buttons,
-        .parent-container .search-section {
+        .parent-container .search-section,
+        .parent-container .btn-primary:not(.parent-back-btn),
+        .parent-container .btn-secondary,
+        .parent-container .btn-danger,
+        .parent-container button:not(.parent-back-btn) {
             display: none !important;
+        }
+        
+        .parent-container .floating,
+        .parent-container .fixed-bottom,
+        .parent-container .navbar,
+        .parent-container .menu {
+            display: none !important;
+        }
+        
+        .parent-container table button,
+        .parent-container table .btn-primary,
+        .parent-container table .btn-danger {
+            display: none !important;
+        }
+        
+        .parent-container .footer-actions,
+        .parent-container .footer-buttons {
+            display: none !important;
+        }
+        
+        .parent-container button:hover {
+            transform: none !important;
+            box-shadow: none !important;
         }
         
         @media print {
