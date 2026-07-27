@@ -3087,3 +3087,18 @@ function downloadQRCodeCard() {
     link.href = canvas.toDataURL("image/png");
     link.click();
 }
+function downloadParentQR() {
+    const qr = document.querySelector("#parentQRCode canvas");
+
+    if (!qr) {
+        alert("QR غير موجود");
+        return;
+    }
+
+    const studentCode = document.getElementById("parentCode")?.textContent || "student";
+
+    const link = document.createElement("a");
+    link.download = studentCode + ".png";
+    link.href = qr.toDataURL("image/png");
+    link.click();
+}
