@@ -590,9 +590,8 @@ function loadStudents() {
             <td>⭐ ${points}</td>
             <td>🔥 ${streak}</td>
             <td>
-               <svg id="barcode-${s.id}"></svg>
-    <div id="qrcode-${s.id}" style="margin-top:8px;"></div>
-</td>
+                <canvas id="barcode-${s.id}" width="100" height="100"></canvas>
+            </td>
             <td>
                 <button class="btn-primary" onclick="editStudent('${s.id}')" style="padding:4px 10px;font-size:11px;">✏️</button>
                 <button class="btn-primary" onclick="viewProfile('${s.id}')" style="padding:4px 10px;font-size:11px;">👤</button>
@@ -768,7 +767,7 @@ function displayFilteredStudents(filteredStudents) {
             <td>⭐ ${points}</td>
             <td>🔥 ${streak}</td>
             <td>
-    <svg id="barcode-${s.id}" class="barcode-svg"></svg>
+                <svg id="barcode-${s.id}" class="barcode-svg"></svg>
             </td>
             <td>
                 <button class="btn-primary" onclick="editStudent('${s.id}')" style="padding:4px 10px;font-size:11px;">✏️</button>
@@ -1819,50 +1818,74 @@ function printSingleCard() { window.print(); }
 // Barcode
 // ============================================================
 
-function generateBarcode(elementId, studentId) {
+function generateBarcode(elementId, code) {
     try {
-        if (typeof QRCode === 'undefined') {
-            console.log('⏳ جاري تحميل مكتبة QR Code...');
-            setTimeout(() => generateBarcode(elementId, studentId), 500);
+        if (typeof JsBarcode === 'undefined') {
+            console.log('⏳ جاري تحميل مكتبة الباركود...');
+            setTimeout(() => generateBarcode(elementId, code), 500);
             return;
         }
 
-        const canvas = document.getElementById(elementId);
-        if (!canvas) return;
+        let upcCode = code.padStart(11, '0');
+        let sum = 0;
 
-        const studentUrl =
-            `${window.location.origin}/profile.html?id=${studentId}`;
-
-        QRCode.toCanvas(
-            canvas,
-            studentUrl,
-            {
-                width: 100,
-                margin: 2
-            },
-            function (error) {
-                if (error) {
-                    console.error('❌ خطأ في إنشاء QR:', error);
-                }
+        for (let i = 0; i < upcCode.length; i++) {
+            if (i % 2 === 0) {
+                sum += parseInt(upcCode[i]) * 3;
+            } else {
+                sum += parseInt(upcCode[i]);
             }
-        );
+        }
 
-        canvas.style.cursor = "pointer";
-        canvas.title = "اضغط لفتح صفحة الطالب";
-        canvas.onclick = function (e) {
-            e.stopPropagation();
-            window.open(studentUrl, "_blank");
-        };
+        const checkDigit = (10 - (sum % 10)) % 10;
+        upcCode += checkDigit;
+
+        const svg = document.getElementById(elementId);
+
+        if (!svg) return;
+
+        JsBarcode(svg, upcCode, {
+            format: "UPC",
+            width: 1.8,
+            height: 60,
+            displayValue: true,
+            fontSize: 16,
+            margin: 5
+        });
 
     } catch (error) {
-        console.log('❌ خطأ في توليد QR:', error);
+        console.log("❌ خطأ في إنشاء الباركود:", error);
     }
 }
 
-function generateAllBarcodes() {
-    students.forEach(student => {
-        generateBarcode(`barcode-${student.id}`, student.id);
+function generateQRCode(elementId, code) {
+
+    const element = document.getElementById(elementId);
+
+    if (!element) return;
+
+    element.innerHTML = "";
+
+    const url = `${window.location.origin}/profile.html?code=${code}`;
+
+    new QRCode(element, {
+        text: url,
+        width: 70,
+        height: 70
     });
+
+}
+
+function generateAllBarcodes() {
+
+    students.forEach(s => {
+
+        generateBarcode(`barcode-${s.id}`, s.code);
+
+        generateQRCode(`qrcode-${s.id}`, s.code);
+
+    });
+
 }
 // ============================================================
 // PDF
