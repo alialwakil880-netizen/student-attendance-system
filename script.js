@@ -590,8 +590,9 @@ function loadStudents() {
             <td>⭐ ${points}</td>
             <td>🔥 ${streak}</td>
             <td>
-                <canvas id="barcode-${s.id}" width="100" height="100"></canvas>
-            </td>
+               <svg id="barcode-${s.id}"></svg>
+    <div id="qrcode-${s.id}" style="margin-top:8px;"></div>
+</td>
             <td>
                 <button class="btn-primary" onclick="editStudent('${s.id}')" style="padding:4px 10px;font-size:11px;">✏️</button>
                 <button class="btn-primary" onclick="viewProfile('${s.id}')" style="padding:4px 10px;font-size:11px;">👤</button>
