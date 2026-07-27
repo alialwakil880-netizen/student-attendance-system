@@ -3047,44 +3047,32 @@ async function markAttendanceById(studentId) {
         alert('❌ حدث خطأ في تسجيل الحضور');
         return false;
     }
-}function downloadParentQR() {
+}
 
-    const temp = document.createElement("div");
+function downloadParentQR() {
 
-    new QRCode(temp, {
-        text: window.currentParentQRUrl,
-        width: 1000,
-        height: 1000,
-        correctLevel: QRCode.CorrectLevel.H
-    });
+    if (!currentParentURL) {
+        alert("لا يوجد QR");
+        return;
+    }
 
-    setTimeout(() => {
+    const canvas = document.createElement("canvas");
 
-        const qrCanvas = temp.querySelector("canvas");
+    QRCode.toCanvas(canvas, currentParentURL, {
+        width: 900,
+        margin: 2
+    }, function (error) {
 
-        // إنشاء صورة بيضاء كبيرة
-        const canvas = document.createElement("canvas");
-        canvas.width = 1200;
-        canvas.height = 1400;
+        if (error) {
+            console.error(error);
+            return;
+        }
 
-        const ctx = canvas.getContext("2d");
-
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0,0,1200,1400);
-
-        // رسم الـQR
-        ctx.drawImage(qrCanvas,100,100,1000,1000);
-
-        // الكود تحت الـQR
-        ctx.fillStyle="#000";
-        ctx.font="bold 70px Arial";
-        ctx.textAlign="center";
-        ctx.fillText(window.currentParentStudentCode,600,1240);
-
-        const link=document.createElement("a");
-        link.download=`${window.currentParentStudentCode}.png`;
-        link.href=canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.download = `QR-${currentParentCode}.png`;
+        link.href = canvas.toDataURL("image/png");
         link.click();
 
-    },300);
+    });
+
 }
