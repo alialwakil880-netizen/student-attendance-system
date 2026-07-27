@@ -184,17 +184,14 @@ async function uploadStudentImage(event) {
     }
     
     try {
-        // تحويل الصورة إلى Base64
         const reader = new FileReader();
         reader.onload = async function(e) {
             const imageData = e.target.result;
             
-            // حفظ الصورة في Supabase أو LocalStorage
             const student = students.find(s => s.id === currentStudentId);
             if (student) {
                 student.image_url = imageData;
                 
-                // حفظ في Supabase
                 if (supabaseClient) {
                     try {
                         await supabaseClient
@@ -229,7 +226,6 @@ async function loadData() {
             await initSupabaseClient();
         }
         
-        // جلب الطلاب من Supabase
         const { data: studentsData, error: studentsError } = await supabaseClient
             .from('students')
             .select('*')
@@ -238,7 +234,6 @@ async function loadData() {
         if (studentsError) throw studentsError;
         students = studentsData || [];
         
-        // جلب المجاميع
         const { data: groupsData, error: groupsError } = await supabaseClient
             .from('groups')
             .select('*')
@@ -247,7 +242,6 @@ async function loadData() {
         if (groupsError) throw groupsError;
         groups = groupsData || [];
         
-        // جلب الحضور
         const { data: attendanceData, error: attendanceError } = await supabaseClient
             .from('attendance')
             .select('*')
@@ -256,7 +250,6 @@ async function loadData() {
         if (attendanceError) throw attendanceError;
         attendance = attendanceData || [];
         
-        // جلب الدرجات
         const { data: gradesData, error: gradesError } = await supabaseClient
             .from('grades')
             .select('*')
@@ -265,7 +258,6 @@ async function loadData() {
         if (gradesError) throw gradesError;
         grades = gradesData || [];
         
-        // جلب سجل المصاريف لكل طالب من Supabase
         for (let student of students) {
             const { data: feesData, error: feesError } = await supabaseClient
                 .from('fees_history')
@@ -1235,7 +1227,7 @@ async function saveManualAttendance() {
 }
 
 // ============================================================
-// QR SCANNER
+// QR SCANNER - الكاميرا
 // ============================================================
 
 function startQRScanner() {
@@ -1247,8 +1239,32 @@ function startQRScanner() {
         return;
     }
     
+    if (isCameraRunning) {
+        alert('⚠️ الكاميرا تعمل بالفعل');
+        return;
+    }
+    
     if (typeof Html5Qrcode === 'undefined') {
-        alert('⚠️ جاري تحميل مكتبة المسح... يرجى الانتظار');
+        if (resultElement) {
+            resultElement.textContent = '⏳ جاري تحميل مكتبة المسح...';
+            resultElement.style.color = '#ff9800';
+        }
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        script.onload = function() {
+            if (resultElement) {
+                resultElement.textContent = '✅ تم تحميل المكتبة، جاري تشغيل الكاميرا...';
+                resultElement.style.color = '#4CAF50';
+            }
+            setTimeout(startQRScanner, 500);
+        };
+        script.onerror = function() {
+            if (resultElement) {
+                resultElement.textContent = '❌ فشل تحميل مكتبة المسح';
+                resultElement.style.color = '#f44336';
+            }
+        };
+        document.head.appendChild(script);
         return;
     }
     
@@ -1257,33 +1273,223 @@ function startQRScanner() {
         resultElement.style.color = '#667eea';
     }
     
-    const scanner = new Html5Qrcode("reader");
-    
-    scanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        async (decodedText) => {
+    try {
+        html5QrCode = new Html5Qrcode("reader");
+        
+        const config = {
+            fps: 15,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+        };
+        
+        html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            onScanSuccess,
+            onScanError
+        ).then(() => {
+            isCameraRunning = true;
             if (resultElement) {
-                resultElement.textContent = `✅ تم مسح الكود: ${decodedText}`;
+                resultElement.textContent = '📷 الكاميرا تعمل... ضع الـ QR أمام الكاميرا';
                 resultElement.style.color = '#4CAF50';
             }
-            await markAttendanceByCode(decodedText);
-            scanner.stop();
+        }).catch(err => {
+            console.error('❌ Camera error:', err);
             if (resultElement) {
-                resultElement.textContent = '⏹ تم إيقاف المسح';
-                resultElement.style.color = '#888';
+                resultElement.textContent = '❌ لا يمكن تشغيل الكاميرا: ' + err.message;
+                resultElement.style.color = '#f44336';
             }
-        },
-        (errorMessage) => {
-            // تجاهل أخطاء القراءة المؤقتة
-        }
-    ).catch(err => {
+            alert('⚠️ لا يمكن تشغيل الكاميرا. تأكد من:\n1. السماح بالوصول إلى الكاميرا\n2. استخدام متصفح حديث (Chrome/Edge)\n3. الاتصال بالإنترنت');
+            isCameraRunning = false;
+        });
+        
+    } catch (error) {
+        console.error('❌ Error starting camera:', error);
         if (resultElement) {
-            resultElement.textContent = '❌ لا يمكن تشغيل الكاميرا: ' + err.message;
+            resultElement.textContent = '❌ حدث خطأ: ' + error.message;
             resultElement.style.color = '#f44336';
         }
-        alert('⚠️ لا يمكن تشغيل الكاميرا. تأكد من السماح بالوصول إلى الكاميرا.');
-    });
+        alert('⚠️ حدث خطأ في تشغيل الكاميرا');
+    }
+}
+
+function stopCameraReader() {
+    const resultElement = document.getElementById('scanResult');
+    
+    if (html5QrCode && isCameraRunning) {
+        html5QrCode.stop().then(() => {
+            isCameraRunning = false;
+            if (resultElement) {
+                resultElement.textContent = '⏹ تم إيقاف الكاميرا';
+                resultElement.style.color = '#888';
+            }
+        }).catch(err => {
+            console.error('❌ Error stopping camera:', err);
+            isCameraRunning = false;
+        });
+    } else {
+        if (resultElement) {
+            resultElement.textContent = '⏹ الكاميرا غير نشطة';
+            resultElement.style.color = '#888';
+        }
+    }
+}
+
+function onScanError(errorMessage) {
+    // تجاهل أخطاء القراءة المؤقتة
+}
+
+// ============================================================
+// ON SCAN SUCCESS - عند مسح QR
+// ============================================================
+
+async function onScanSuccess(decodedText) {
+    const resultElement = document.getElementById('scanResult');
+    
+    console.log('📱 تم مسح الكود:', decodedText);
+    
+    // التحقق: هل هو رابط ولي الأمر؟
+    if (decodedText.includes('parent-portal.html')) {
+        try {
+            const urlParams = new URLSearchParams(decodedText.split('?')[1]);
+            const studentId = urlParams.get('id');
+            
+            console.log('👨‍👦 رابط ولي الأمر - ID:', studentId);
+            
+            if (studentId) {
+                const student = students.find(s => s.id === studentId);
+                if (student) {
+                    const studentName = getStudentField(student, 'name') || 'غير معروف';
+                    await markAttendanceById(studentId);
+                    if (resultElement) {
+                        resultElement.innerHTML = `✅ تم تسجيل حضور: <strong>${studentName}</strong>`;
+                        resultElement.style.color = '#4CAF50';
+                    }
+                    window.open(decodedText, '_blank');
+                } else {
+                    if (resultElement) {
+                        resultElement.innerHTML = `❌ طالب غير موجود (ID: ${studentId})`;
+                        resultElement.style.color = '#f44336';
+                    }
+                }
+            } else {
+                if (resultElement) {
+                    resultElement.innerHTML = `❌ رابط غير صحيح`;
+                    resultElement.style.color = '#f44336';
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error processing parent QR:', error);
+            if (resultElement) {
+                resultElement.innerHTML = `❌ خطأ في معالجة الرابط`;
+                resultElement.style.color = '#f44336';
+            }
+        }
+        
+        setTimeout(stopCameraReader, 3000);
+        return;
+    }
+    
+    // الكود العادي (باركود الطالب)
+    const student = students.find(s => s.code === decodedText);
+    
+    if (student) {
+        try {
+            const studentName = getStudentField(student, 'name') || 'غير معروف';
+            
+            const today = new Date().toISOString().split('T')[0];
+            const already = attendance.find(a =>
+                a.student_id === student.id &&
+                a.date.startsWith(today)
+            );
+            
+            if (already) {
+                if (resultElement) {
+                    resultElement.innerHTML = `⚠️ ${studentName} مسجل حضور بالفعل`;
+                    resultElement.style.color = '#ff9800';
+                }
+                setTimeout(stopCameraReader, 2000);
+                return;
+            }
+            
+            const { data, error } = await supabaseClient
+                .from('attendance')
+                .insert([{
+                    student_id: student.id,
+                    group_id: student.group_id || null,
+                    status: 'present',
+                    method: 'camera',
+                    date: new Date().toISOString()
+                }])
+                .select();
+            
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                attendance.unshift(data[0]);
+            } else {
+                const tempRecord = {
+                    id: Date.now().toString(),
+                    student_id: student.id,
+                    group_id: student.group_id || null,
+                    status: 'present',
+                    date: new Date().toISOString(),
+                    method: 'camera'
+                };
+                attendance.unshift(tempRecord);
+            }
+            
+            const currentStreak = student.streak || 0;
+            const currentPoints = student.points || 0;
+            
+            const { error: updateError } = await supabaseClient
+                .from('students')
+                .update({ 
+                    streak: currentStreak + 1,
+                    points: currentPoints + 5
+                })
+                .eq('id', student.id);
+            
+            if (!updateError) {
+                student.streak = currentStreak + 1;
+                student.points = currentPoints + 5;
+                checkMedals(student);
+            }
+            
+            saveData();
+            updateDashboard();
+            updateLeaderboard();
+            updateHonorBoard();
+            
+            if (resultElement) {
+                resultElement.innerHTML = `✅ <strong>تم تسجيل حضور: ${studentName}</strong> ⭐ +5 نقاط`;
+                resultElement.style.color = '#4CAF50';
+            }
+            
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/student-profile.html?code=${student.code}`;
+            
+            setTimeout(stopCameraReader, 3000);
+            
+        } catch (error) {
+            console.error('❌ Error saving attendance:', error);
+            if (resultElement) {
+                resultElement.textContent = '❌ حدث خطأ في تسجيل الحضور: ' + error.message;
+                resultElement.style.color = '#f44336';
+            }
+        }
+    } else {
+        if (resultElement) {
+            resultElement.innerHTML = `❌ <strong>كود غير معروف:</strong> ${decodedText}`;
+            resultElement.style.color = '#f44336';
+        }
+        setTimeout(() => {
+            if (isCameraRunning && resultElement) {
+                resultElement.innerHTML = '📷 الكاميرا تعمل... ضع الـ QR أمام الكاميرا';
+                resultElement.style.color = '#4CAF50';
+            }
+        }, 3000);
+    }
 }
 
 // ============================================================
@@ -1363,14 +1569,6 @@ async function markAttendanceByCode(code) {
     } catch (error) {
         console.error('❌ Error:', error);
         alert('❌ حدث خطأ في تسجيل الحضور');
-    }
-}
-
-function stopCameraReader() {
-    const resultElement = document.getElementById('scanResult');
-    if (resultElement) {
-        resultElement.textContent = '⏹ تم إيقاف الكاميرا';
-        resultElement.style.color = '#888';
     }
 }
 
@@ -1885,7 +2083,6 @@ function loadProfileData() {
     const points = getStudentField(student, 'points') || 0;
     const streak = getStudentField(student, 'streak') || 0;
 
-    // تحديث الصورة
     const avatarImg = document.getElementById('profileAvatarImg');
     const avatarPlaceholder = document.getElementById('avatarPlaceholder');
     if (avatarImg && avatarPlaceholder) {
@@ -1899,7 +2096,6 @@ function loadProfileData() {
         }
     }
 
-    // تحديث العناصر
     const elements = {
         profileName: document.getElementById('profileName'),
         profilePhone: document.getElementById('profilePhone'),
@@ -1988,7 +2184,6 @@ async function deleteGrade(gradeId) {
     try {
         const deletedGrade = grades.find(g => g.id === gradeId);
         
-        // حذف من Supabase
         if (supabaseClient) {
             const { error } = await supabaseClient
                 .from('grades')
@@ -2000,10 +2195,8 @@ async function deleteGrade(gradeId) {
             }
         }
         
-        // حذف من البيانات المحلية
         grades = grades.filter(g => g.id !== gradeId);
         
-        // خصم النقاط إذا كانت الدرجة ممتازة أو جيدة جداً
         if (deletedGrade) {
             const student = students.find(s => s.id === deletedGrade.student_id);
             if (student) {
@@ -2088,7 +2281,6 @@ async function deleteFee(studentId, feeId) {
             return;
         }
         
-        // حذف من Supabase
         if (supabaseClient) {
             const { error } = await supabaseClient
                 .from('fees_history')
@@ -2100,17 +2292,14 @@ async function deleteFee(studentId, feeId) {
             }
         }
         
-        // حذف من البيانات المحلية
         student.feesHistory = student.feesHistory.filter(f => f.id !== feeId);
         
-        // إعادة حساب إجمالي المدفوع
         let totalPaid = 0;
         student.feesHistory.forEach(f => {
             totalPaid += f.amount || 0;
         });
         student.fees_paid = totalPaid;
         
-        // تحديث في Supabase
         if (supabaseClient) {
             await supabaseClient
                 .from('students')
@@ -2631,221 +2820,9 @@ function loadStudentFromQR() {
                 return `<tr><td>${new Date(f.date).toLocaleDateString('ar-EG')}</td><td><strong style="color:#4CAF50;">${f.amount} ج</strong></td><td>${f.note || '-'}</td></tr>`;
             }).join('');
         }
-        // ============================================================
-// PARENT PORTAL QR - إنشاء QR لولي الأمر
-// ============================================================
-
-function generateParentQRCode(studentId) {
-    const student = students.find(s => s.id === studentId);
-    if (!student) {
-        alert('⚠️ الطالب غير موجود');
-        return;
-    }
-    
-    const studentName = getStudentField(student, 'name') || 'غير معروف';
-    const studentCode = getStudentField(student, 'code') || '---';
-    
-    // إنشاء رابط ولي الأمر مع إضافة scan=true
-    const parentUrl = `${window.location.origin}/parent-portal.html?id=${studentId}`;
-    
-    // إنشاء QR Code
-    const qrContainer = document.createElement('div');
-    qrContainer.style.cssText = 'display:flex;justify-content:center;margin:20px 0;';
-    
-    const qrElement = document.createElement('div');
-    qrElement.id = 'parentQRCode';
-    qrContainer.appendChild(qrElement);
-    
-    // عرض QR Code في Modal
-    showQRModal('📱 كود ولي الأمر', qrContainer, studentName, studentCode);
-    
-    // إنشاء QR Code
-    try {
-        new QRCode(document.getElementById('parentQRCode'), {
-            text: parentUrl,
-            width: 200,
-            height: 200
-        });
-    } catch (error) {
-        console.error('❌ خطأ في إنشاء QR Code:', error);
-        alert('⚠️ حدث خطأ في إنشاء QR Code');
     }
 }
 
-// ============================================================
-// Show QR Modal
-// ============================================================
-
-function showQRModal(title, content, studentName, studentCode) {
-    let modal = document.getElementById('qrModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'qrModal';
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(10px);
-            z-index: 9999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s ease;
-        `;
-        document.body.appendChild(modal);
-    }
-    
-    modal.innerHTML = `
-        <div style="
-            background: white;
-            border-radius: 24px;
-            padding: 40px;
-            max-width: 450px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: scaleIn 0.3s ease;
-            position: relative;
-            direction: rtl;
-        ">
-            <button onclick="closeQRModal()" style="
-                position: absolute;
-                top: 15px;
-                left: 15px;
-                background: #f44336;
-                color: white;
-                border: none;
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                font-size: 18px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            ">✕</button>
-            
-            <h2 style="color:#667eea;margin-bottom:10px;">${title}</h2>
-            <p style="color:#888;margin-bottom:5px;">👨‍🎓 ${studentName}</p>
-            <p style="color:#888;margin-bottom:20px;">🔑 الكود: <strong style="color:#667eea;">${studentCode}</strong></p>
-            
-            <div id="qrContent" style="display:flex;justify-content:center;margin:20px 0;">
-                ${content.innerHTML}
-            </div>
-            
-            <div style="background:#f8f9fa;padding:12px;border-radius:12px;text-align:right;font-size:13px;color:#555;">
-                <p style="margin:5px 0;">✅ <strong>المدير:</strong> يمسح → يسجل حضور تلقائي</p>
-                <p style="margin:5px 0;">👨‍👦 <strong>ولي الأمر:</strong> يمسح → يفتح صفحة المتابعة</p>
-            </div>
-            
-            <button onclick="closeQRModal()" style="
-                margin-top:20px;
-                padding:10px 30px;
-                background:#667eea;
-                color:white;
-                border:none;
-                border-radius:12px;
-                font-size:16px;
-                cursor:pointer;
-                transition:all 0.3s ease;
-            ">🔙 إغلاق</button>
-        </div>
-    `;
-    
-    // نقل المحتوى إلى المكان المخصص
-    const qrContent = document.getElementById('qrContent');
-    qrContent.innerHTML = '';
-    qrContent.appendChild(content);
-    
-    modal.style.display = 'flex';
-}
-
-function closeQRModal() {
-    const modal = document.getElementById('qrModal');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.remove();
-    }
-}
-
-// ============================================================
-// MARK ATTENDANCE BY ID - تسجيل حضور بواسطة ID
-// ============================================================
-
-async function markAttendanceById(studentId) {
-    const student = students.find(s => s.id === studentId);
-    if (!student) {
-        alert("❌ الطالب غير موجود");
-        return false;
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-
-    const already = attendance.find(a =>
-        a.student_id === student.id &&
-        a.date.startsWith(today)
-    );
-
-    if (already) {
-        const studentName = getStudentField(student, 'name') || 'غير معروف';
-        alert(`⚠️ ${studentName} مسجل حضور بالفعل`);
-        return false;
-    }
-
-    try {
-        const { error } = await supabaseClient
-            .from('attendance')
-            .insert([{
-                student_id: student.id,
-                group_id: student.group_id,
-                status: 'present',
-                date: new Date().toISOString()
-            }]);
-
-        if (error) {
-            console.error(error);
-            alert("❌ فشل تسجيل الحضور");
-            return false;
-        }
-
-        attendance.push({
-            student_id: student.id,
-            group_id: student.group_id,
-            status: 'present',
-            date: new Date().toISOString()
-        });
-
-        const currentStreak = getStudentField(student, 'streak') || 0;
-        const currentPoints = getStudentField(student, 'points') || 0;
-        
-        student.streak = currentStreak + 1;
-        student.points = currentPoints + 5;
-        
-        await supabaseClient
-            .from('students')
-            .update({ 
-                streak: student.streak,
-                points: student.points
-            })
-            .eq('id', student.id);
-        
-        checkMedals(student);
-        saveData();
-        updateDashboard();
-        updateLeaderboard();
-        updateHonorBoard();
-        
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Error:', error);
-        alert('❌ حدث خطأ في تسجيل الحضور');
-        return false;
-    }
-}
-    }
-}
 // ============================================================
 // PARENT PORTAL QR - إنشاء QR لولي الأمر
 // ============================================================
@@ -3052,118 +3029,5 @@ async function markAttendanceById(studentId) {
         console.error('❌ Error:', error);
         alert('❌ حدث خطأ في تسجيل الحضور');
         return false;
-    }
-}
-
-// ============================================================
-// تعديل onScanSuccess للتعامل مع QR ولي الأمر
-// ============================================================
-
-// استبدل دالة onScanSuccess الموجودة بهذه النسخة
-async function onScanSuccess(decodedText) {
-    const resultElement = document.getElementById('scanResult');
-    
-    // التحقق: هل هو رابط ولي الأمر؟
-    if (decodedText.includes('parent-portal.html')) {
-        const urlParams = new URLSearchParams(decodedText.split('?')[1]);
-        const studentId = urlParams.get('id');
-        
-        if (studentId) {
-            const student = students.find(s => s.id === studentId);
-            if (student) {
-                await markAttendanceById(studentId);
-                if (resultElement) {
-                    resultElement.innerHTML = `✅ تم تسجيل حضور: ${student.name}`;
-                    resultElement.style.color = '#4CAF50';
-                }
-                window.open(decodedText, '_blank');
-            } else {
-                if (resultElement) {
-                    resultElement.innerHTML = `❌ طالب غير موجود`;
-                    resultElement.style.color = '#f44336';
-                }
-            }
-        }
-        return;
-    }
-    
-    // الكود العادي (باركود الطالب)
-    const student = students.find(s => s.code === decodedText);
-    
-    if (student) {
-        try {
-            const { data, error } = await supabaseClient
-                .from('attendance')
-                .insert([{
-                    student_id: student.id,
-                    group_id: student.group_id || null,
-                    status: 'present',
-                    method: 'camera'
-                }])
-                .select();
-            
-            if (error) throw error;
-            
-            if (data && data.length > 0) {
-                attendance.unshift(data[0]);
-            } else {
-                const tempRecord = {
-                    id: Date.now().toString(),
-                    student_id: student.id,
-                    group_id: student.group_id || null,
-                    status: 'present',
-                    date: new Date().toISOString(),
-                    method: 'camera'
-                };
-                attendance.unshift(tempRecord);
-            }
-            
-            const { error: updateError } = await supabaseClient
-                .from('students')
-                .update({ 
-                    streak: (student.streak || 0) + 1,
-                    points: (student.points || 0) + 5
-                })
-                .eq('id', student.id);
-            
-            if (!updateError) {
-                student.streak = (student.streak || 0) + 1;
-                student.points = (student.points || 0) + 5;
-                checkMedals(student);
-            }
-            
-            saveData();
-            updateDashboard();
-            updateLeaderboard();
-            updateHonorBoard();
-            
-            if (resultElement) {
-                resultElement.innerHTML = `✅ <strong>تم تسجيل حضور: ${student.name}</strong> ⭐ +5 نقاط`;
-                resultElement.style.color = '#4CAF50';
-            }
-            
-            const baseUrl = window.location.origin;
-            window.location.href = `${baseUrl}/student-profile.html?code=${student.code}`;
-            
-            setTimeout(() => stopCameraReader(), 3000);
-            
-        } catch (error) {
-            console.error('❌ Error:', error);
-            if (resultElement) {
-                resultElement.textContent = '❌ حدث خطأ في تسجيل الحضور';
-                resultElement.style.color = '#f44336';
-            }
-        }
-    } else {
-        if (resultElement) {
-            resultElement.innerHTML = `❌ <strong>كود غير معروف:</strong> ${decodedText}`;
-            resultElement.style.color = '#f44336';
-        }
-        setTimeout(() => {
-            if (isCameraRunning && resultElement) {
-                resultElement.innerHTML = '📷 الكاميرا تعمل... ضع الباركود أمام الكاميرا';
-                resultElement.style.color = '#4CAF50';
-            }
-        }, 2000);
     }
 }
